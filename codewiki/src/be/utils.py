@@ -14,11 +14,10 @@ logger = logging.getLogger(__name__)
 
 # PythonMonkey (used by mermaid_parser.parse_mermaid_py) binds its JS engine
 # to the thread that first imported it — typically the main thread at module
-# load time. The caw backend dispatches MCP tool calls on a FastMCP
-# daemon-thread event loop, where parse_mermaid_py raises
-# "cannot find a running Python event-loop". Recording the main loop here
-# lets validate_single_diagram marshal the call back via
-# asyncio.run_coroutine_threadsafe so PythonMonkey finds its home loop.
+# load time. If validation is called from a worker-thread event loop,
+# parse_mermaid_py may raise "cannot find a running Python event-loop".
+# Recording the main loop here lets validate_single_diagram marshal the call
+# back via asyncio.run_coroutine_threadsafe so PythonMonkey finds its home loop.
 _main_loop: "asyncio.AbstractEventLoop | None" = None
 _main_loop_thread_ident: int | None = None
 

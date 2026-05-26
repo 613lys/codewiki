@@ -59,11 +59,6 @@ api = [
     "anthropic>=0.67.0",
     "boto3>=1.40.2",
 ]
-caw = [
-    "coding-agent-wrapper>=0.1.2",
-    "mcp>=1.12.3",
-    "pydantic-ai>=1.0.6",
-]
 mermaid = [
     "mermaid-py>=0.8.0",
     "mermaid-parser-py>=0.0.2; python_version < '3.12'",
@@ -84,7 +79,6 @@ all = [
     "pydantic-ai>=1.0.6",
     "anthropic>=0.67.0",
     "boto3>=1.40.2",
-    "coding-agent-wrapper>=0.1.2",
     "mcp>=1.12.3",
     "mermaid-py>=0.8.0",
     "mermaid-parser-py>=0.0.2; python_version < '3.12'",

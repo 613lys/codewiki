@@ -309,10 +309,9 @@ class DocumentationGenerator:
         try:
             parent_docs = self.backend.complete(prompt)
 
-            # Parse and save parent documentation. Subscription-CLI backends
-            # (claude-code / codex) sometimes ignore the <OVERVIEW> wrapper and
-            # return raw markdown; fall back to the response as-is in that case
-            # rather than crashing with an index error.
+            # Parse and save parent documentation. Some providers may return
+            # raw markdown instead of the requested <OVERVIEW> wrapper; fall
+            # back to the response as-is rather than crashing.
             if "<OVERVIEW>" in parent_docs and "</OVERVIEW>" in parent_docs:
                 parent_content = parent_docs.split("<OVERVIEW>")[1].split("</OVERVIEW>")[0].strip()
             else:
@@ -355,8 +354,7 @@ class DocumentationGenerator:
                 logger.debug(f"Module tree not found at {module_tree_path}, clustering modules")
                 # Bind cluster_model into the completer so the backend uses the
                 # configured clustering model (separate from main_model) when
-                # one is set.  Caw mode's cluster_model is typically empty —
-                # complete() falls back to its own _model in that case.
+                # one is set.
                 cluster_model = self.config.cluster_model or None
                 module_tree = cluster_modules(
                     leaf_nodes,

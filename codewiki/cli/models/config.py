@@ -142,18 +142,13 @@ class Configuration:
         """
         Validate all configuration fields.
 
-        Subscription-mode providers (claude-code, codex) authenticate via the
-        underlying CLI's OAuth and do not require a base URL or fallback model.
-        IDE Bridge mode writes task files for an external AI IDE and also does
-        not require API credentials.
+        IDE Bridge mode writes task files for an external AI IDE and does not
+        require API credentials.
 
         Raises:
             ConfigurationError: If validation fails
         """
-        from codewiki.src.be.backend import is_api_keyless_provider, is_caw_provider
-        if is_caw_provider(self.provider):
-            validate_model_name(self.main_model)
-            return
+        from codewiki.src.be.backend import is_api_keyless_provider
         if is_api_keyless_provider(self.provider):
             return
         validate_url(self.base_url)
@@ -217,14 +212,10 @@ class Configuration:
     def is_complete(self) -> bool:
         """Check if all required fields are set.
 
-        Subscription-mode providers (claude-code, codex) only require
-        ``main_model``; ``base_url``, ``cluster_model`` and ``fallback_model``
-        are unused. IDE Bridge mode does not require model settings because
-        prompts are handed to an external IDE.
+        IDE Bridge mode does not require model settings because prompts are
+        handed to an external IDE.
         """
-        from codewiki.src.be.backend import is_api_keyless_provider, is_caw_provider
-        if is_caw_provider(self.provider):
-            return bool(self.main_model)
+        from codewiki.src.be.backend import is_api_keyless_provider
         if is_api_keyless_provider(self.provider):
             return True
         return bool(

@@ -1,4 +1,4 @@
-"""LLMBackend — unified abstraction over the API and subscription LLM paths.
+"""LLMBackend - unified abstraction over the API and IDE Bridge LLM paths.
 
 CodeWiki has two LLM call shapes:
 
@@ -7,10 +7,10 @@ CodeWiki has two LLM call shapes:
 
 Two implementations satisfy this interface:
 
-* :class:`PydanticAIBackend` — wraps the existing openai-compatible / anthropic
+* :class:`PydanticAIBackend` - wraps the existing openai-compatible / anthropic
   / bedrock / azure-openai paths via pydantic-ai + litellm.  API-key based.
-* :class:`CawBackend` — routes through the ``claude`` or ``codex`` CLI via the
-  :mod:`caw` library, using the user's OAuth subscription.  No API key.
+* :class:`IDEBridgeBackend` - writes task/result files for an external AI IDE.
+  No API key or local LLM wrapper is required.
 
 Provider selection happens in one place: :func:`get_backend`.
 """
@@ -24,13 +24,7 @@ if TYPE_CHECKING:
     from codewiki.src.be.dependency_analyzer.models.core import Node
 
 
-CAW_PROVIDERS = frozenset({"claude-code", "codex"})
 IDE_BRIDGE_PROVIDERS = frozenset({"ide-bridge"})
-
-
-def is_caw_provider(provider: str) -> bool:
-    """Return True if *provider* uses caw (CLI subscription mode)."""
-    return provider in CAW_PROVIDERS
 
 
 def is_ide_bridge_provider(provider: str) -> bool:
@@ -40,7 +34,7 @@ def is_ide_bridge_provider(provider: str) -> bool:
 
 def is_api_keyless_provider(provider: str) -> bool:
     """Return True for providers that do not require a stored API key."""
-    return is_caw_provider(provider) or is_ide_bridge_provider(provider)
+    return is_ide_bridge_provider(provider)
 
 
 class IDEBridgePendingTask(RuntimeError):
@@ -78,8 +72,5 @@ def get_backend(config) -> "LLMBackend":
     if is_ide_bridge_provider(provider):
         from codewiki.src.be.ide_bridge_backend import IDEBridgeBackend
         return IDEBridgeBackend(config)
-    if is_caw_provider(provider):
-        from codewiki.src.be.caw_backend import CawBackend
-        return CawBackend(config)
     from codewiki.src.be.pydantic_ai_backend import PydanticAIBackend
     return PydanticAIBackend(config)

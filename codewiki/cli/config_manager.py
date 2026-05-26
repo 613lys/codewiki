@@ -206,15 +206,10 @@ class ConfigManager:
             self._config.azure_deployment = azure_deployment
 
         # Validate configuration whenever the minimum required fields are set.
-        # Caw providers only need main_model; IDE Bridge needs no credentials
-        # because it writes local task files; API providers need base_url +
-        # cluster_model on top of that. The validate() method itself routes
-        # by provider, so we only gate on whether enough is set to validate.
-        from codewiki.src.be.backend import is_api_keyless_provider, is_caw_provider
-        if is_caw_provider(self._config.provider):
-            if self._config.main_model:
-                self._config.validate()
-        elif is_api_keyless_provider(self._config.provider):
+        # IDE Bridge needs no credentials because it writes local task files;
+        # API providers need base_url + main_model + cluster_model.
+        from codewiki.src.be.backend import is_api_keyless_provider
+        if is_api_keyless_provider(self._config.provider):
             self._config.validate()
         elif self._config.base_url and self._config.main_model and self._config.cluster_model:
             self._config.validate()
@@ -279,8 +274,7 @@ class ConfigManager:
         """
         Check if configuration is complete and valid.
 
-        Subscription-mode providers (claude-code, codex) and IDE Bridge mode do
-        not require an API key.
+        IDE Bridge mode does not require an API key.
 
         Returns:
             True if configured, False otherwise

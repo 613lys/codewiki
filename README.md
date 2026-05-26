@@ -19,13 +19,7 @@
   <a href="#quick-start"><strong>Quick Start</strong></a> •
   <a href="#cli-commands"><strong>CLI Commands</strong></a> •
   <a href="#documentation-output"><strong>Output Structure</strong></a> •
-  <a href="./docs/index.html"><strong>Repo Docs</strong></a> •
   <a href="https://arxiv.org/abs/2510.24428"><strong>Paper</strong></a>
-</p>
-
-<p align="center">
-  📚 <strong>CodeWiki documents itself</strong> — browse the generated documentation for this repository at
-  <a href="https://fsoft-ai4code.github.io/CodeWiki/docs/index.html">CodeWiki docs</a>.
 </p>
 
 <p align="center">
@@ -45,9 +39,6 @@ pip install git+https://github.com/613lys/codewiki.git
 # Optional: install API-backed providers (OpenAI-compatible, Anthropic, Bedrock, Azure)
 pip install "codewiki[api] @ git+https://github.com/613lys/codewiki.git"
 
-# Optional: install Claude Code / Codex CLI subscription backend
-pip install "codewiki[caw] @ git+https://github.com/613lys/codewiki.git"
-
 # Optional: install everything
 pip install "codewiki[all] @ git+https://github.com/613lys/codewiki.git"
 
@@ -57,13 +48,13 @@ codewiki --version
 
 ### 2. Configure Your Environment
 
-CodeWiki supports **IDE Bridge** mode for AI IDE workflows without API dependencies, plus optional **OpenAI-compatible**, **Anthropic**, **AWS Bedrock**, **Azure OpenAI**, **Claude Code**, and **Codex** providers.
+CodeWiki supports **IDE Bridge** mode for AI IDE workflows without API dependencies, plus optional **OpenAI-compatible**, **Anthropic**, **AWS Bedrock**, and **Azure OpenAI** providers.
 
 ```bash
 # IDE Bridge mode (no API key; complete generated task files in your AI IDE)
 codewiki config set --provider ide-bridge
 
-# The minimal install intentionally skips OpenAI, pydantic-ai, caw, FastAPI,
+# The minimal install intentionally skips OpenAI, pydantic-ai, FastAPI,
 # and Mermaid validation packages. Install the matching optional extra only
 # when you use that provider or feature.
 
@@ -101,24 +92,7 @@ codewiki config set \
   --main-model anthropic.claude-sonnet-4-v2:0 \
   --cluster-model anthropic.claude-sonnet-4-v2:0
 
-# Subscription mode (Claude Code) — uses your existing Claude OAuth login.
-# Install the Claude Code CLI and run `claude login` first.
-codewiki config set \
-  --provider claude-code \
-  --main-model claude-sonnet-4-6 \
-  --cluster-model claude-sonnet-4-6
-
-# Subscription mode (Codex) — uses your existing Codex CLI login.
-# Install the Codex CLI and run `codex login` first.
-codewiki config set \
-  --provider codex \
-  --main-model gpt-5.4 \
-  --cluster-model gpt-5.5
 ```
-
-**Subscription mode** routes every LLM call through the local `claude` / `codex` CLI binary (via the [`caw`](https://github.com/zzjas/caw) library), so you can run CodeWiki on a Claude Pro/Max or Codex subscription instead of paying per-token API usage. Claude Code's built-in `Write`/`Edit`/`Bash` tools are disabled inside CodeWiki's agent loop so documentation writes still go through CodeWiki's Mermaid-validating editor.
-
-> **Note on model names.** In subscription mode the model string is forwarded directly to `claude --model` / `codex --model`, so use the bare CLI model name (e.g. `gpt-5.4`, `claude-sonnet-4-6`) — **not** the litellm-style `openai/…` or `anthropic/…` prefix used by `openai-compatible`. If you previously ran with `openai-compatible`, re-run `config set` for **both** `--main-model` and `--cluster-model` to clear any stale prefixes; `config set` only updates the keys you pass.
 
 ### 3. Generate Documentation
 
@@ -339,8 +313,6 @@ Generated documentation includes both **textual descriptions** and **visual arti
 └── index.html               # Interactive viewer (with --github-pages)
 ```
 
-> **See it in action:** This repository's own docs are checked in under [`./docs/`](./docs/) — open [`./docs/index.html`](./docs/index.html) in a browser for the interactive viewer, or start from [`./docs/overview.md`](./docs/overview.md).
-
 ---
 
 ## Experimental Results
@@ -411,7 +383,6 @@ CodeWiki employs a three-stage process for comprehensive documentation generatio
 ## Additional Resources
 
 ### Documentation & Guides
-- **[This Repo's Generated Docs](./docs/index.html)** - Interactive documentation for CodeWiki itself, produced by CodeWiki (start at [`docs/overview.md`](./docs/overview.md))
 - **[MCP Server](codewiki/mcp/)** - Model Context Protocol server for IDE integrations
 - **[Docker Deployment](docker/DOCKER_README.md)** - Containerized deployment instructions
 - **[Development Guide](DEVELOPMENT.md)** - Project structure, architecture, and contributing guidelines

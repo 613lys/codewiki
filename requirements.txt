@@ -1,8 +1,7 @@
 # Minimal runtime dependencies for CLI + static analysis + IDE Bridge mode.
-# For API, caw/Claude Code/Codex, web, MCP, or Mermaid validation support,
+# For API, web, MCP, or Mermaid validation support,
 # install the optional extras from pyproject.toml, for example:
 #   pip install -e ".[api]"
-#   pip install -e ".[caw]"
 #   pip install -e ".[web]"
 #   pip install -e ".[all]"
 click>=8.1.0

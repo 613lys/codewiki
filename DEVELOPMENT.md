@@ -16,8 +16,6 @@ codewiki/
 │   │   ├── be/               # Backend (dependency analysis, agents)
 │   │   │   ├── backend.py            # LLMBackend abstraction + factory
 │   │   │   ├── pydantic_ai_backend.py  # API-key backend (OpenAI/Anthropic/Bedrock/Azure)
-│   │   │   ├── caw_backend.py        # Subscription backend (claude / codex CLI via caw)
-│   │   │   ├── caw_toolkit.py        # CodeWiki tools exposed to caw via MCP
 │   │   │   ├── agent_tools/
 │   │   │   ├── cluster_modules.py
 │   │   │   ├── dependency_analyzer/
@@ -68,7 +66,6 @@ pip install -e .
 
 # Optional extras for provider-specific development
 pip install -e ".[api]"      # OpenAI-compatible, Anthropic, Bedrock, Azure
-pip install -e ".[caw]"      # Claude Code / Codex CLI subscription backend
 pip install -e ".[web]"      # FastAPI web UI
 pip install -e ".[mermaid]"  # Mermaid diagram validation
 
@@ -92,17 +89,13 @@ pip install -e ".[dev]"
 - Feature-oriented module partitioning
 - Topological sorting for dependency ordering
 
-#### 3. Agent System (`src/be/backend.py`, `pydantic_ai_backend.py`, `caw_backend.py`)
+#### 3. Agent System (`src/be/backend.py`, `pydantic_ai_backend.py`, `ide_bridge_backend.py`)
 
-- ``LLMBackend`` abstracts the API-key, CLI-subscription, and IDE Bridge paths.
+- ``LLMBackend`` abstracts the API-key and IDE Bridge paths.
 - ``IDEBridgeBackend`` writes task files for external AI IDEs such as Windsurf.
-  It does not need OpenAI, pydantic-ai, caw, or API keys.
+  It does not need OpenAI, pydantic-ai, or API keys.
 - ``PydanticAIBackend`` runs the per-module agent via pydantic-ai (used by
   ``openai-compatible`` / ``anthropic`` / ``bedrock`` / ``azure-openai``).
-- ``CawBackend`` routes the per-module agent through the ``claude`` /
-  ``codex`` CLI via the ``caw`` library (used by the ``claude-code`` /
-  ``codex`` providers).  CodeWiki's tools are exposed to the CLI via an MCP
-  server defined in ``caw_toolkit.py``.
 
 #### 4. Agent Tools (`src/be/agent_tools/`)
 
@@ -183,7 +176,7 @@ class AgentInstructions:
 5. **Use in relevant components**:
    - File filtering → `dependency_analyzer/ast_parser.py`
    - Prompts → `be/prompt_template.py`
-   - Agent creation → `be/pydantic_ai_backend.py` (API path) or `be/caw_backend.py` (subscription path)
+   - Agent creation → `be/pydantic_ai_backend.py` (API path) or `be/ide_bridge_backend.py` (IDE Bridge path)
 
 ---
 

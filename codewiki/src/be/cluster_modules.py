@@ -5,7 +5,6 @@ import traceback
 logger = logging.getLogger(__name__)
 
 from codewiki.src.be.dependency_analyzer.models.core import Node
-from codewiki.src.be.llm_services import call_llm
 from codewiki.src.be.utils import count_tokens
 from codewiki.src.config import Config
 from codewiki.src.be.prompt_template import format_cluster_prompt
@@ -59,8 +58,8 @@ def cluster_modules(
         completer: optional ``(prompt: str) -> str`` callable.  When provided,
             clustering calls go through this completer instead of the legacy
             ``call_llm``.  This is how the LLMBackend abstraction injects
-            subscription-mode (caw) routing.  If ``None``, falls back to
-            ``call_llm`` for backward compatibility with direct callers.
+            IDE Bridge task generation.  If ``None``, falls back to ``call_llm``
+            for backward compatibility with direct API callers.
     """
     potential_core_components, potential_core_components_with_code = format_potential_core_components(leaf_nodes, components)
 
@@ -72,6 +71,7 @@ def cluster_modules(
     if completer is not None:
         response = completer(prompt)
     else:
+        from codewiki.src.be.llm_services import call_llm
         response = call_llm(prompt, config, model=config.cluster_model)
 
     #parse the response

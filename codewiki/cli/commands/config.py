@@ -86,13 +86,12 @@ def config_group():
 @click.option(
     "--provider",
     type=click.Choice(
-        ['openai-compatible', 'anthropic', 'bedrock', 'azure-openai', 'claude-code', 'codex', 'ide-bridge'],
+        ['openai-compatible', 'anthropic', 'bedrock', 'azure-openai', 'ide-bridge'],
         case_sensitive=False,
     ),
     help=(
         "LLM provider type (default: openai-compatible). "
-        "Use 'claude-code' or 'codex' to run on a CLI subscription, or "
-        "'ide-bridge' to exchange prompts/results through local files."
+        "Use 'ide-bridge' to exchange prompts/results through local files."
     ),
 )
 @click.option(
@@ -129,9 +128,9 @@ def config_set(
     Set configuration values for CodeWiki.
     
     API keys are stored securely in your system keychain:
-      • macOS: Keychain Access
-      • Windows: Credential Manager  
-      • Linux: Secret Service (GNOME Keyring, KWallet)
+      - macOS: Keychain Access
+      - Windows: Credential Manager
+      - Linux: Secret Service (GNOME Keyring, KWallet)
     
     Examples:
 
@@ -141,16 +140,7 @@ def config_set(
         --main-model claude-sonnet-4 --cluster-model claude-sonnet-4 --fallback-model glm-4p5
 
     \b
-    # Subscription mode (Claude Code) — no API key needed,
-    # authenticate via 'claude login' on the host first
-    $ codewiki config set --provider claude-code --main-model claude-sonnet-4-5
-
-    \b
-    # Subscription mode (Codex)
-    $ codewiki config set --provider codex --main-model gpt-5.2-codex
-
-    \b
-    # IDE Bridge mode — no API key needed; prompts are written to task files
+    # IDE Bridge mode - no API key needed; prompts are written to task files
     $ codewiki config set --provider ide-bridge
 
     \b
@@ -375,20 +365,13 @@ def config_show(output_json: bool):
             click.echo("━" * 40)
             click.echo()
             
-            from codewiki.src.be.backend import is_caw_provider, is_ide_bridge_provider
-            caw_mode = bool(config) and is_caw_provider(config.provider)
+            from codewiki.src.be.backend import is_ide_bridge_provider
             ide_bridge_mode = bool(config) and is_ide_bridge_provider(config.provider)
 
             click.secho("Credentials", fg="cyan", bold=True)
             if ide_bridge_mode:
                 click.secho(
                     "  IDE Bridge mode: no API key needed; complete generated task files in your AI IDE",
-                    fg="cyan",
-                )
-            elif caw_mode:
-                cli_name = "claude" if config.provider == "claude-code" else "codex"
-                click.secho(
-                    f"  Subscription mode: authenticate via '{cli_name} login' (no API key needed)",
                     fg="cyan",
                 )
             elif api_key:
@@ -405,7 +388,7 @@ def config_show(output_json: bool):
                 if ide_bridge_mode:
                     click.echo("  Bridge Tasks:     <output>/.codewiki/ide_bridge/tasks")
                     click.echo("  Bridge Results:   <output>/.codewiki/ide_bridge/results")
-                elif not caw_mode:
+                else:
                     click.echo(f"  Base URL:         {config.base_url or 'Not set'}")
                     click.echo(f"  Cluster Model:    {config.cluster_model or 'Not set'}")
                     click.echo(f"  Fallback Model:   {config.fallback_model or 'Not set'}")
@@ -476,10 +459,10 @@ def config_validate(quick: bool, verbose: bool):
     Validate configuration and test LLM API connectivity.
     
     Checks:
-      • Configuration file exists and is valid
-      • API key is present
-      • API settings are correctly formatted
-      • (Optional) API connectivity test
+      - Configuration file exists and is valid
+      - API key is present
+      - API settings are correctly formatted
+      - (Optional) API connectivity test
     
     Examples:
     
@@ -521,22 +504,20 @@ def config_validate(quick: bool, verbose: bool):
         
         # Load config early so we know the provider for the rest of the checks.
         config = manager.get_config()
-        from codewiki.src.be.backend import is_api_keyless_provider, is_caw_provider, is_ide_bridge_provider
-        caw_mode = bool(config) and is_caw_provider(config.provider)
+        from codewiki.src.be.backend import is_api_keyless_provider, is_ide_bridge_provider
         ide_bridge_mode = bool(config) and is_ide_bridge_provider(config.provider)
         api_keyless_mode = bool(config) and is_api_keyless_provider(config.provider)
 
-        # Step 2: Check API key (skipped for subscription/IDE Bridge providers)
+        # Step 2: Check API key (skipped for IDE Bridge provider)
         if verbose:
             click.echo()
             click.echo("[2/5] Checking API key...")
 
         if api_keyless_mode:
-            mode_name = "IDE Bridge mode" if ide_bridge_mode else "subscription mode"
             if verbose:
-                click.secho(f"      ✓ API key not required ({mode_name})", fg="green")
+                click.secho("      ✓ API key not required (IDE Bridge mode)", fg="green")
             else:
-                click.secho(f"✓ API key not required ({mode_name})", fg="green")
+                click.secho("✓ API key not required (IDE Bridge mode)", fg="green")
         else:
             if verbose:
                 storage = "system keychain" if manager.keyring_available else "encrypted file"
@@ -555,17 +536,16 @@ def config_validate(quick: bool, verbose: bool):
             else:
                 click.secho("✓ API key present (stored in keychain)", fg="green")
 
-        # Step 3: Check base URL (skipped for subscription/IDE Bridge providers)
+        # Step 3: Check base URL (skipped for IDE Bridge provider)
         if verbose:
             click.echo()
             click.echo("[3/5] Checking base URL...")
 
         if api_keyless_mode:
-            mode_name = "IDE Bridge mode" if ide_bridge_mode else "subscription mode"
             if verbose:
-                click.secho(f"      ✓ Base URL not required ({mode_name})", fg="green")
+                click.secho("      ✓ Base URL not required (IDE Bridge mode)", fg="green")
             else:
-                click.secho(f"✓ Base URL not required ({mode_name})", fg="green")
+                click.secho("✓ Base URL not required (IDE Bridge mode)", fg="green")
         else:
             if verbose:
                 click.echo(f"      URL: {config.base_url}")
@@ -598,14 +578,6 @@ def config_validate(quick: bool, verbose: bool):
                 click.secho("      ✓ Model configuration not required", fg="green")
             else:
                 click.secho("✓ Model configuration not required (IDE Bridge mode)", fg="green")
-        elif caw_mode:
-            if not config.main_model:
-                click.secho("✗ Main model not configured", fg="red")
-                sys.exit(EXIT_CONFIG_ERROR)
-            if verbose:
-                click.secho("      ✓ Main model configured", fg="green")
-            else:
-                click.secho(f"✓ Main model configured: {config.main_model}", fg="green")
         else:
             if not config.main_model or not config.cluster_model or not config.fallback_model:
                 click.secho("✗ Models not configured", fg="red")
@@ -634,30 +606,6 @@ def config_validate(quick: bool, verbose: bool):
                 click.secho("      ↳ Complete each task in your AI IDE and save results under the matching results path.", fg="cyan")
             else:
                 click.secho("✓ IDE Bridge mode ready", fg="green")
-        elif caw_mode:
-            if verbose:
-                click.echo()
-                click.echo("[5/5] Checking CLI availability...")
-
-            import shutil
-            cli_name = "claude" if config.provider == "claude-code" else "codex"
-            cli_path = shutil.which(cli_name)
-            if not cli_path:
-                click.secho(f"✗ {cli_name} CLI not found in PATH", fg="red")
-                click.echo(
-                    f"\nInstall the {cli_name} CLI and run '{cli_name} login' "
-                    f"to authenticate, then re-run this command."
-                )
-                sys.exit(EXIT_CONFIG_ERROR)
-
-            if verbose:
-                click.secho(f"      ✓ {cli_name} CLI found at {cli_path}", fg="green")
-                click.secho(
-                    f"      ↳ Ensure '{cli_name} login' has been run on this host.",
-                    fg="cyan",
-                )
-            else:
-                click.secho(f"✓ {cli_name} CLI available (run '{cli_name} login' if not yet authenticated)", fg="green")
         elif not quick:
             if verbose:
                 click.echo()
