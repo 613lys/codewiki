@@ -28,7 +28,6 @@ dependencies = [
     "click>=8.1.0",
     "keyring>=24.0.0",
     "GitPython>=3.1.40",
-    "Jinja2>=3.1.6",
     "tree-sitter>=0.23.2",
     "tree-sitter-language-pack>=0.8.0",
     "tree-sitter-python>=0.23.6",
@@ -40,34 +39,61 @@ dependencies = [
     "tree-sitter-c-sharp>=0.23.1",
     "tree-sitter-php>=0.23.0",
     "tree-sitter-kotlin>=1.1.0",
-    "openai>=1.107.0",
-    "litellm>=1.77.0",
     "pydantic>=2.11.7",
-    "pydantic-settings>=2.10.1",
-    "pydantic-ai>=1.0.6",
-    "requests>=2.32.4",
     "python-dotenv>=1.1.1",
-    "rich>=14.1.0",
-    "networkx>=3.5",
-    "psutil>=7.0.0",
-    "PyYAML>=6.0.2",
-    "mermaid-parser-py>=0.0.2",
-    "mermaid-py>=0.8.0",
-    "fastapi>=0.116.0",
-    "uvicorn>=0.35.0",
-    "python-multipart>=0.0.20",
     "colorama>=0.4.6",
-    "logfire>=4.1.0",
-    "coding-agent-wrapper>=0.1.2"
+    "tiktoken>=0.10.0"
 ]
 
 [external]
-# Node.js is required for mermaid-py which validates mermaid diagrams in generated documentation
+# Node.js is only needed when installing the optional mermaid validation extra.
 build-requires = [
     { name = "nodejs", version = ">=14.0.0" }
 ]
 
 [project.optional-dependencies]
+api = [
+    "openai>=1.107.0",
+    "litellm>=1.77.0",
+    "pydantic-ai>=1.0.6",
+    "anthropic>=0.67.0",
+    "boto3>=1.40.2",
+]
+caw = [
+    "coding-agent-wrapper>=0.1.2",
+    "mcp>=1.12.3",
+    "pydantic-ai>=1.0.6",
+]
+mermaid = [
+    "mermaid-py>=0.8.0",
+    "mermaid-parser-py>=0.0.2; python_version < '3.12'",
+]
+web = [
+    "fastapi>=0.116.0",
+    "uvicorn>=0.35.0",
+    "python-multipart>=0.0.20",
+    "Jinja2>=3.1.6",
+    "markdown-it-py>=3.0.0",
+]
+mcp = [
+    "mcp>=1.12.3",
+]
+all = [
+    "openai>=1.107.0",
+    "litellm>=1.77.0",
+    "pydantic-ai>=1.0.6",
+    "anthropic>=0.67.0",
+    "boto3>=1.40.2",
+    "coding-agent-wrapper>=0.1.2",
+    "mcp>=1.12.3",
+    "mermaid-py>=0.8.0",
+    "mermaid-parser-py>=0.0.2; python_version < '3.12'",
+    "fastapi>=0.116.0",
+    "uvicorn>=0.35.0",
+    "python-multipart>=0.0.20",
+    "Jinja2>=3.1.6",
+    "markdown-it-py>=3.0.0",
+]
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
@@ -110,7 +136,7 @@ codewiki = ["templates/**/*", "py.typed"]
 
 [tool.black]
 line-length = 100
-target-version = ['py312']
+target-version = ['py311']
 
 [tool.mypy]
 python_version = "3.11"
@@ -121,7 +147,7 @@ disallow_incomplete_defs = false
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py311"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

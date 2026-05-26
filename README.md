@@ -39,8 +39,17 @@
 ### 1. Install CodeWiki
 
 ```bash
-# Install from source
-pip install git+https://github.com/FSoft-AI4Code/CodeWiki.git
+# Minimal install for CLI + static analysis + IDE Bridge mode
+pip install git+https://github.com/613lys/codewiki.git
+
+# Optional: install API-backed providers (OpenAI-compatible, Anthropic, Bedrock, Azure)
+pip install "codewiki[api] @ git+https://github.com/613lys/codewiki.git"
+
+# Optional: install Claude Code / Codex CLI subscription backend
+pip install "codewiki[caw] @ git+https://github.com/613lys/codewiki.git"
+
+# Optional: install everything
+pip install "codewiki[all] @ git+https://github.com/613lys/codewiki.git"
 
 # Verify installation
 codewiki --version
@@ -48,9 +57,16 @@ codewiki --version
 
 ### 2. Configure Your Environment
 
-CodeWiki supports multiple LLM providers: **OpenAI-compatible**, **Anthropic**, **AWS Bedrock**, **Azure OpenAI**, plus subscription mode via **Claude Code** and **Codex** CLIs (no API key required).
+CodeWiki supports **IDE Bridge** mode for AI IDE workflows without API dependencies, plus optional **OpenAI-compatible**, **Anthropic**, **AWS Bedrock**, **Azure OpenAI**, **Claude Code**, and **Codex** providers.
 
 ```bash
+# IDE Bridge mode (no API key; complete generated task files in your AI IDE)
+codewiki config set --provider ide-bridge
+
+# The minimal install intentionally skips OpenAI, pydantic-ai, caw, FastAPI,
+# and Mermaid validation packages. Install the matching optional extra only
+# when you use that provider or feature.
+
 # OpenAI-compatible
 codewiki config set \
   --provider openai-compatible \

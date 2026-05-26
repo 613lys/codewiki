@@ -63,11 +63,17 @@ cd CodeWiki
 python3.11 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install in development mode
+# Install minimal CLI + static analysis + IDE Bridge dependencies
 pip install -e .
 
-# Install development dependencies
-pip install -r requirements.txt
+# Optional extras for provider-specific development
+pip install -e ".[api]"      # OpenAI-compatible, Anthropic, Bedrock, Azure
+pip install -e ".[caw]"      # Claude Code / Codex CLI subscription backend
+pip install -e ".[web]"      # FastAPI web UI
+pip install -e ".[mermaid]"  # Mermaid diagram validation
+
+# Test/lint tooling
+pip install -e ".[dev]"
 ```
 
 ## Core Components
@@ -88,7 +94,9 @@ pip install -r requirements.txt
 
 #### 3. Agent System (`src/be/backend.py`, `pydantic_ai_backend.py`, `caw_backend.py`)
 
-- ``LLMBackend`` abstracts the API-key and CLI-subscription paths.
+- ``LLMBackend`` abstracts the API-key, CLI-subscription, and IDE Bridge paths.
+- ``IDEBridgeBackend`` writes task files for external AI IDEs such as Windsurf.
+  It does not need OpenAI, pydantic-ai, caw, or API keys.
 - ``PydanticAIBackend`` runs the per-module agent via pydantic-ai (used by
   ``openai-compatible`` / ``anthropic`` / ``bedrock`` / ``azure-openai``).
 - ``CawBackend`` routes the per-module agent through the ``claude`` /
