@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://python.org/"><img alt="Python version" src="https://img.shields.io/badge/python-3.12+-blue?style=flat-square" /></a>
+  <a href="https://python.org/"><img alt="Python version" src="https://img.shields.io/badge/python-3.11+-blue?style=flat-square" /></a>
   <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-green.svg?style=flat-square" /></a>
   <a href="https://github.com/FSoft-AI4Code/CodeWiki/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/FSoft-AI4Code/CodeWiki?style=flat-square" /></a>
   <a href="https://arxiv.org/abs/2510.24428"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2510.24428-b31b1b?style=flat-square" /></a>
@@ -385,7 +385,7 @@ CodeWiki employs a three-stage process for comprehensive documentation generatio
 
 ## Requirements
 
-- **Python 3.12+**
+- **Python 3.11+**
 - **Node.js** (for Mermaid diagram validation)
 - **LLM API access** (Anthropic Claude, OpenAI, Azure OpenAI, AWS Bedrock)
 - **Git** (for branch creation features)

@@ -47,7 +47,7 @@ codewiki/
 
 ### Prerequisites
 
-- Python 3.12+
+- Python 3.11+
 - Node.js (for mermaid validation)
 - Git
 - Tree-sitter language parsers
@@ -60,7 +60,7 @@ git clone https://github.com/FSoft-AI4Code/CodeWiki.git
 cd CodeWiki
 
 # Create virtual environment
-python3.12 -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install in development mode
@@ -301,4 +301,3 @@ export CODEWIKI_LOG_LEVEL=DEBUG
 For development questions:
 - GitHub Issues: https://github.com/FSoft-AI4Code/CodeWiki/issues
 - Main Documentation: [README.md](README.md)
-
