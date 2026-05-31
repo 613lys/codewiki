@@ -20,10 +20,6 @@ from typing import Any, Dict, List
 
 from codewiki.src.be.backend import IDEBridgePendingTask, LLMBackend
 from codewiki.src.be.dependency_analyzer.models.core import Node
-from codewiki.src.be.prompt_template import (
-    format_leaf_system_prompt,
-    format_user_prompt,
-)
 from codewiki.src.config import MODULE_TREE_FILENAME, OVERVIEW_FILENAME, Config
 from codewiki.src.utils import file_manager
 
@@ -88,24 +84,27 @@ class IDEBridgeBackend(LLMBackend):
         if os.path.exists(docs_path):
             return module_tree
 
-        system_prompt = (
-            "IDE Bridge mode note: you cannot call CodeWiki runtime tools in "
-            "this environment. Use the code and module tree embedded in the "
-            "user prompt, then produce the final markdown document directly.\n\n"
-            + format_leaf_system_prompt(
-            module_name,
-            self._config.get_prompt_addition(),
-            )
+        task_fingerprint = json.dumps(
+            {
+                "module_name": module_name,
+                "module_path": module_path,
+                "core_component_ids": sorted(core_component_ids),
+                "module_tree": module_tree,
+            },
+            sort_keys=True,
         )
-        user_prompt = format_user_prompt(
-            module_name=module_name,
-            core_component_ids=core_component_ids,
-            components=components,
-            module_tree=module_tree,
-        )
-        prompt = f"<SYSTEM_PROMPT>\n{system_prompt}\n</SYSTEM_PROMPT>\n\n<USER_PROMPT>\n{user_prompt}\n</USER_PROMPT>"
-        task_id = self._task_id("module", "/".join(module_path), prompt)
+        task_id = self._task_id("module", task_fingerprint)
         result_path = self._results_dir / f"{task_id}.md"
+        task_body = self._format_module_task(
+            module_name=module_name,
+            components=components,
+            core_component_ids=core_component_ids,
+            module_path=module_path,
+            working_dir=working_dir,
+            module_tree=module_tree,
+            result_path=result_path,
+            docs_path=Path(docs_path),
+        )
 
         if result_path.exists():
             content = result_path.read_text(encoding="utf-8").strip()
@@ -123,39 +122,123 @@ class IDEBridgeBackend(LLMBackend):
             "result_path": str(result_path),
             "docs_path": docs_path,
         }
-        instructions = (
-            "Generate the markdown documentation for this CodeWiki module in "
-            "your AI IDE.\n\n"
-            f"Write only the final markdown document to:\n\n`{result_path}`\n\n"
-            "Do not include chat prefaces or code fences around the whole file. "
-            "Mermaid diagrams inside the markdown are fine."
-        )
-        self._write_task(task_path, instructions, metadata, prompt)
+        self._write_task(task_path, task_body, metadata)
         self._add_pending("module_documentation", task_path, result_path)
         return module_tree
+
+    def _format_module_task(
+        self,
+        *,
+        module_name: str,
+        components: Dict[str, Node],
+        core_component_ids: List[str],
+        module_path: List[str],
+        working_dir: str,
+        module_tree: Dict[str, Any],
+        result_path: Path,
+        docs_path: Path,
+    ) -> str:
+        """Create an AI-IDE-oriented task without embedding full source files."""
+        source_files: dict[str, list[str]] = {}
+        missing_components: list[str] = []
+        repo_root = Path(self._config.repo_path).resolve()
+
+        for component_id in core_component_ids:
+            component = components.get(component_id)
+            if component is None:
+                missing_components.append(component_id)
+                continue
+            relative_path = self._component_relative_path(component, repo_root)
+            source_files.setdefault(relative_path, []).append(component_id)
+
+        source_lines: list[str] = []
+        for index, (relative_path, ids) in enumerate(sorted(source_files.items()), 1):
+            source_lines.append(f"{index}. `{relative_path}`")
+            for component_id in sorted(ids):
+                source_lines.append(f"   - `{component_id}`")
+
+        custom_instructions = self._config.get_prompt_addition().strip()
+        custom_section = ""
+        if custom_instructions:
+            custom_section = (
+                "\n## Additional Instructions\n\n"
+                f"{custom_instructions}\n"
+            )
+
+        missing_section = ""
+        if missing_components:
+            missing_section = (
+                "\n## Components Not Found In Analysis Map\n\n"
+                + "\n".join(f"- `{component_id}`" for component_id in missing_components)
+                + "\n"
+            )
+
+        module_tree_path = Path(working_dir) / MODULE_TREE_FILENAME
+
+        return (
+            "# CodeWiki IDE Bridge Task\n\n"
+            "You are working inside an AI IDE with access to the repository files. "
+            "Do not treat this task file as the only source of truth; read the referenced "
+            "source files directly from the workspace.\n\n"
+            "## Goal\n\n"
+            f"Generate architecture documentation for module `{module_name}`.\n\n"
+            "## Output Contract\n\n"
+            f"- Write only the final markdown document to `{result_path}`.\n"
+            f"- CodeWiki will copy that result into `{docs_path}` on the next run.\n"
+            "- Do not include chat prefaces, explanations about this task, or a code fence around the whole file.\n"
+            "- Include Mermaid diagrams where they clarify architecture, dependencies, data flow, or user flow.\n"
+            "- Link to related module docs when they exist instead of duplicating their content.\n"
+            "- Keep the document useful to a developer maintaining this repository.\n\n"
+            "## Repository Context\n\n"
+            f"- Repository root: `{repo_root}`\n"
+            f"- Documentation output directory: `{Path(working_dir).resolve()}`\n"
+            f"- Module path: `{module_path or ['<repo>']}`\n"
+            f"- Module tree file: `{module_tree_path}`\n"
+            f"- Module tree currently has {len(module_tree)} top-level entries.\n\n"
+            "## Source Files To Read\n\n"
+            + ("\n".join(source_lines) if source_lines else "- No source files were provided by analysis.")
+            + "\n"
+            + custom_section
+            + missing_section
+            + "\n## Suggested Documentation Shape\n\n"
+            "1. Purpose and scope\n"
+            "2. High-level architecture\n"
+            "3. Main components and responsibilities\n"
+            "4. Important runtime flows\n"
+            "5. Data model and persistence notes, if relevant\n"
+            "6. Security/authentication notes, if relevant\n"
+            "7. Extension and maintenance notes\n"
+        )
+
+    @staticmethod
+    def _component_relative_path(component: Node, repo_root: Path) -> str:
+        raw_path = Path(getattr(component, "file_path", "") or getattr(component, "relative_path", ""))
+        if raw_path.is_absolute():
+            try:
+                return str(raw_path.resolve().relative_to(repo_root))
+            except ValueError:
+                return str(raw_path)
+        return str(raw_path)
 
     def _write_task(
         self,
         task_path: Path,
         instructions: str,
         metadata: Dict[str, Any],
-        prompt: str,
+        prompt: str | None = None,
     ) -> None:
         self._tasks_dir.mkdir(parents=True, exist_ok=True)
         self._results_dir.mkdir(parents=True, exist_ok=True)
         metadata_path = task_path.with_suffix(".json")
 
         if not task_path.exists():
-            task_path.write_text(
+            body = instructions if instructions.lstrip().startswith("#") else (
                 "# CodeWiki IDE Bridge Task\n\n"
-                "## Instructions\n\n"
-                f"{instructions}\n\n"
-                "## Metadata\n\n"
-                "```json\n"
-                f"{json.dumps(metadata, indent=2)}\n"
-                "```\n\n"
-                "## Prompt\n\n"
-                f"{prompt}\n",
+                f"{instructions}"
+            )
+            task_path.write_text(
+                f"{body.rstrip()}\n\n"
+                + (f"\n## Prompt\n\n{prompt}\n" if prompt is not None else ""),
                 encoding="utf-8",
             )
         if not metadata_path.exists():
