@@ -3,6 +3,8 @@ Generate command for documentation generation.
 """
 
 import json
+import os
+import subprocess
 import sys
 import logging
 import traceback
@@ -217,13 +219,15 @@ def _read_agent_manifest(output_dir: Path) -> dict:
             "pending_manifest_path": str(manifest_path),
         }
     try:
-        return json.loads(manifest_path.read_text(encoding="utf-8"))
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         return {
             "status": "error",
             "message": f"pending_tasks.json is invalid JSON: {exc}",
             "pending_manifest_path": str(manifest_path),
         }
+    payload.setdefault("pending_manifest_path", str(manifest_path))
+    return payload
 
 
 def _write_agent_status(output_dir: Path, status: str, **extra) -> dict:
@@ -232,6 +236,13 @@ def _write_agent_status(output_dir: Path, status: str, **extra) -> dict:
     manifest_path = bridge_dir / "pending_tasks.json"
     payload = {
         "status": status,
+        "next_action": "stop" if status == "complete" else "inspect_status",
+        "agent_prompt": (
+            "CodeWiki generation is complete. Do not generate more task results. "
+            "Review output_dir if needed."
+            if status == "complete"
+            else "Inspect this status object and continue the CodeWiki agent batch loop."
+        ),
         "output_dir": str(output_dir),
         "pending_manifest_path": str(manifest_path),
         **extra,
@@ -408,6 +419,7 @@ def generate_command(
     logger = create_logger(verbose=verbose)
     start_time = time.time()
     output_dir = Path(output).expanduser().resolve()
+    os.environ["CODEWIKI_RERUN_COMMAND"] = subprocess.list2cmdline(sys.argv)
     
     # Suppress httpx INFO logs
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -476,7 +488,7 @@ def generate_command(
                 _invalidate_affected_modules(output_dir, changed_files, logger, verbose)
 
         # Check for existing documentation
-        if not update and output_dir.exists() and list(output_dir.glob("*.md")):
+        if not update and not agent_json and output_dir.exists() and list(output_dir.glob("*.md")):
             if not click.confirm(
                 f"\n{output_dir} already contains documentation. Overwrite?",
                 default=True

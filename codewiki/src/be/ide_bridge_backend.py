@@ -363,6 +363,7 @@ class IDEBridgeBackend(LLMBackend):
             "kind": kind,
             "task_path": str(task_path),
             "result_path": str(result_path),
+            **self._task_guidance(kind),
         }
         if task not in self.pending_tasks:
             self.pending_tasks.append(task)
@@ -371,8 +372,17 @@ class IDEBridgeBackend(LLMBackend):
     def _write_pending_manifest(self) -> None:
         self._bridge_dir.mkdir(parents=True, exist_ok=True)
         manifest_path = self._bridge_dir / "pending_tasks.json"
+        rerun_command = os.environ.get("CODEWIKI_RERUN_COMMAND", "codewiki generate")
         manifest = {
             "status": "pending",
+            "next_action": "complete_pending_tasks",
+            "agent_prompt": (
+                "You are running CodeWiki in agent batch mode. Complete every task listed in "
+                "tasks. For each task, read task_path, inspect the referenced repository files "
+                "directly, write the exact required response to result_path, then rerun "
+                "rerun_command. Repeat until CodeWiki reports status=complete."
+            ),
+            "rerun_command": rerun_command,
             "task_count": len(self.pending_tasks),
             "tasks": self.pending_tasks,
             "instructions": [
@@ -383,6 +393,44 @@ class IDEBridgeBackend(LLMBackend):
             ],
         }
         manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    @staticmethod
+    def _task_guidance(kind: str) -> Dict[str, str]:
+        if kind == "completion":
+            return {
+                "expected_action": (
+                    "Read the task prompt and write the exact model response requested by the prompt."
+                ),
+                "output_contract": (
+                    "Keep required wrapper tags such as <GROUPED_COMPONENTS>, <SUB_MODULES>, "
+                    "or <OVERVIEW> when the task asks for them."
+                ),
+            }
+        if kind == "module_documentation":
+            return {
+                "expected_action": (
+                    "Generate the final markdown document for the requested module by reading "
+                    "the referenced source files directly from the repository."
+                ),
+                "output_contract": (
+                    "Write only the final markdown document to result_path. Do not wrap the "
+                    "whole document in a code fence or add chat prefaces."
+                ),
+            }
+        if kind == "submodule_planning":
+            return {
+                "expected_action": (
+                    "Plan useful child modules from the listed component IDs by reading the "
+                    "referenced source files directly from the repository."
+                ),
+                "output_contract": (
+                    "Write exactly one <SUB_MODULES>...</SUB_MODULES> block to result_path."
+                ),
+            }
+        return {
+            "expected_action": "Read task_path and write the required response to result_path.",
+            "output_contract": "Follow the output contract inside task_path exactly.",
+        }
 
     def has_pending_tasks(self) -> bool:
         return bool(self.pending_tasks)
