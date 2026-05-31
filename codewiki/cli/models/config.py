@@ -10,13 +10,6 @@ from dataclasses import dataclass, asdict, field
 from typing import Optional, List
 from pathlib import Path
 
-from codewiki.cli.utils.validation import (
-    validate_url,
-    validate_api_key,
-    validate_model_name,
-)
-
-
 @dataclass
 class AgentInstructions:
     """
@@ -108,15 +101,15 @@ class Configuration:
     CodeWiki configuration data model.
 
     Attributes:
-        base_url: LLM API base URL
-        main_model: Primary model for documentation generation
-        cluster_model: Model for module clustering
-        fallback_model: Fallback model for documentation generation
+        base_url: Reserved for older API-backed configs
+        main_model: Model label stored in task metadata
+        cluster_model: Model label stored in clustering task metadata
+        fallback_model: Reserved for older API-backed configs
         default_output: Default output directory
-        provider: LLM provider type (openai-compatible, anthropic, bedrock, azure-openai)
-        aws_region: AWS region for Bedrock provider
-        api_version: Azure OpenAI API version
-        azure_deployment: Azure OpenAI deployment name
+        provider: LLM provider type. This build supports ide-bridge.
+        aws_region: Reserved for older API-backed configs
+        api_version: Reserved for older API-backed configs
+        azure_deployment: Reserved for older API-backed configs
         max_tokens: Maximum tokens for LLM response (default: 32768)
         max_token_per_module: Maximum tokens per module for clustering (default: 36369)
         max_token_per_leaf_module: Maximum tokens per leaf module (default: 16000)
@@ -126,9 +119,9 @@ class Configuration:
     base_url: str
     main_model: str
     cluster_model: str
-    fallback_model: str = "glm-4p5"
+    fallback_model: str = ""
     default_output: str = "docs"
-    provider: str = "openai-compatible"
+    provider: str = "ide-bridge"
     aws_region: str = "us-east-1"
     api_version: str = "2024-12-01-preview"
     azure_deployment: str = ""
@@ -148,13 +141,8 @@ class Configuration:
         Raises:
             ConfigurationError: If validation fails
         """
-        from codewiki.src.be.backend import is_api_keyless_provider
-        if is_api_keyless_provider(self.provider):
-            return
-        validate_url(self.base_url)
-        validate_model_name(self.main_model)
-        validate_model_name(self.cluster_model)
-        validate_model_name(self.fallback_model)
+        if self.provider != "ide-bridge":
+            raise ValueError("This build supports only the ide-bridge provider")
     
     def to_dict(self) -> dict:
         """Convert to dictionary."""
@@ -198,7 +186,7 @@ class Configuration:
             cluster_model=data.get('cluster_model', ''),
             fallback_model=data.get('fallback_model', 'glm-4p5'),
             default_output=data.get('default_output', 'docs'),
-            provider=data.get('provider', 'openai-compatible'),
+            provider=data.get('provider', 'ide-bridge'),
             aws_region=data.get('aws_region', 'us-east-1'),
             api_version=data.get('api_version', '2024-12-01-preview'),
             azure_deployment=data.get('azure_deployment', ''),
@@ -215,15 +203,7 @@ class Configuration:
         IDE Bridge mode does not require model settings because prompts are
         handed to an external IDE.
         """
-        from codewiki.src.be.backend import is_api_keyless_provider
-        if is_api_keyless_provider(self.provider):
-            return True
-        return bool(
-            self.base_url and
-            self.main_model and
-            self.cluster_model and
-            self.fallback_model
-        )
+        return self.provider == "ide-bridge"
     
     def to_backend_config(self, repo_path: str, output_dir: str, api_key: str, runtime_instructions: AgentInstructions = None):
         """

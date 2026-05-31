@@ -1,16 +1,13 @@
-"""LLMBackend - unified abstraction over the API and IDE Bridge LLM paths.
+"""LLMBackend - abstraction for CodeWiki LLM tasks.
 
 CodeWiki has two LLM call shapes:
 
 * a synchronous single-shot completion (clustering, parent / repo overviews)
-* an asynchronous multi-turn agentic loop with custom tools (per-module docs)
+* a per-module documentation task
 
-Two implementations satisfy this interface:
-
-* :class:`PydanticAIBackend` - wraps the existing openai-compatible / anthropic
-  / bedrock / azure-openai paths via pydantic-ai + litellm.  API-key based.
-* :class:`IDEBridgeBackend` - writes task/result files for an external AI IDE.
-  No API key or local LLM wrapper is required.
+The maintained implementation is :class:`IDEBridgeBackend`, which writes
+task/result files for an external AI IDE. No API key or local LLM wrapper is
+required.
 
 Provider selection happens in one place: :func:`get_backend`.
 """
@@ -84,9 +81,10 @@ class LLMBackend(abc.ABC):
 
 def get_backend(config) -> "LLMBackend":
     """Return the backend instance matching ``config.provider``."""
-    provider = getattr(config, "provider", "openai-compatible")
-    if is_ide_bridge_provider(provider):
-        from codewiki.src.be.ide_bridge_backend import IDEBridgeBackend
-        return IDEBridgeBackend(config)
-    from codewiki.src.be.pydantic_ai_backend import PydanticAIBackend
-    return PydanticAIBackend(config)
+    provider = getattr(config, "provider", "ide-bridge")
+    if not is_ide_bridge_provider(provider):
+        raise ValueError(
+            f"Unsupported provider '{provider}'. This build supports only 'ide-bridge'."
+        )
+    from codewiki.src.be.ide_bridge_backend import IDEBridgeBackend
+    return IDEBridgeBackend(config)

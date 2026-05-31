@@ -36,9 +36,6 @@
 # Minimal install for CLI + static analysis + IDE Bridge mode
 pip install git+https://github.com/613lys/codewiki.git
 
-# Optional: install API-backed providers (OpenAI-compatible, Anthropic, Bedrock, Azure)
-pip install "codewiki[api] @ git+https://github.com/613lys/codewiki.git"
-
 # Optional: install everything
 pip install "codewiki[all] @ git+https://github.com/613lys/codewiki.git"
 
@@ -48,50 +45,11 @@ codewiki --version
 
 ### 2. Configure Your Environment
 
-CodeWiki supports **IDE Bridge** mode for AI IDE workflows without API dependencies, plus optional **OpenAI-compatible**, **Anthropic**, **AWS Bedrock**, and **Azure OpenAI** providers.
+CodeWiki supports **IDE Bridge** mode for AI IDE workflows without API dependencies. CodeWiki writes LLM tasks to local files, and your AI IDE completes those tasks by writing matching result files.
 
 ```bash
 # IDE Bridge mode (no API key; complete generated task files in your AI IDE)
 codewiki config set --provider ide-bridge
-
-# The minimal install intentionally skips OpenAI, pydantic-ai, FastAPI,
-# and Mermaid validation packages. Install the matching optional extra only
-# when you use that provider or feature.
-
-# OpenAI-compatible
-codewiki config set \
-  --provider openai-compatible \
-  --api-key YOUR_API_KEY \
-  --base-url https://api.anthropic.com \
-  --main-model claude-sonnet-4 \
-  --cluster-model claude-sonnet-4 \
-  --fallback-model glm-4p5
-
-# Anthropic
-codewiki config set \
-  --provider anthropic \
-  --api-key YOUR_API_KEY \
-  --base-url https://api.anthropic.com \
-  --main-model claude-sonnet-4 \
-  --cluster-model claude-sonnet-4 \
-  --fallback-model glm-4p5
-
-# Azure OpenAI
-codewiki config set \
-  --provider azure-openai \
-  --api-key YOUR_AZURE_KEY \
-  --base-url https://YOUR_RESOURCE.openai.azure.com \
-  --azure-deployment YOUR_DEPLOYMENT \
-  --main-model gpt-4o \
-  --cluster-model gpt-4o
-
-# AWS Bedrock
-codewiki config set \
-  --provider bedrock \
-  --aws-region us-east-1 \
-  --main-model anthropic.claude-sonnet-4-v2:0 \
-  --cluster-model anthropic.claude-sonnet-4-v2:0
-
 ```
 
 ### 3. Generate Documentation
@@ -375,7 +333,7 @@ CodeWiki employs a three-stage process for comprehensive documentation generatio
 
 - **Python 3.11+**
 - **Node.js** (for Mermaid diagram validation)
-- **LLM API access** (Anthropic Claude, OpenAI, Azure OpenAI, AWS Bedrock)
+- **AI IDE / agent access** for completing IDE Bridge task files
 - **Git** (for branch creation features)
 
 ---

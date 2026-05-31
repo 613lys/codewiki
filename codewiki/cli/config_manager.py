@@ -151,10 +151,10 @@ class ConfigManager:
             max_token_per_module: Maximum tokens per module for clustering
             max_token_per_leaf_module: Maximum tokens per leaf module
             max_depth: Maximum depth for hierarchical decomposition
-            provider: LLM provider type (openai-compatible, anthropic, bedrock, azure-openai)
-            aws_region: AWS region for Bedrock provider
-            api_version: Azure OpenAI API version
-            azure_deployment: Azure OpenAI deployment name
+            provider: LLM provider type. This build supports ide-bridge.
+            aws_region: Reserved for older API-backed configs
+            api_version: Reserved for older API-backed configs
+            azure_deployment: Reserved for older API-backed configs
         """
         # Ensure config directory exists
         try:

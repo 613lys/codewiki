@@ -16,10 +16,6 @@ from codewiki.cli.utils.errors import (
     EXIT_CONFIG_ERROR
 )
 from codewiki.cli.utils.validation import (
-    validate_url,
-    validate_api_key,
-    validate_model_name,
-    is_top_tier_model,
     mask_api_key
 )
 
@@ -33,7 +29,7 @@ def parse_patterns(patterns_str: str) -> List[str]:
 
 @click.group(name="config")
 def config_group():
-    """Manage CodeWiki configuration (API credentials and settings)."""
+    """Manage CodeWiki configuration."""
     pass
 
 
@@ -41,27 +37,27 @@ def config_group():
 @click.option(
     "--api-key",
     type=str,
-    help="LLM API key (stored securely in system keychain)"
+    help="Reserved for older API-backed configs; not used by IDE Bridge"
 )
 @click.option(
     "--base-url",
     type=str,
-    help="LLM API base URL (e.g., https://api.anthropic.com)"
+    help="Reserved for older API-backed configs; not used by IDE Bridge"
 )
 @click.option(
     "--main-model",
     type=str,
-    help="Primary model for documentation generation"
+    help="Optional model label stored in task metadata"
 )
 @click.option(
     "--cluster-model",
     type=str,
-    help="Model for module clustering (recommend top-tier)"
+    help="Optional model label stored in clustering task metadata"
 )
 @click.option(
     "--fallback-model",
     type=str,
-    help="Fallback model for documentation generation"
+    help="Reserved for older API-backed configs; not used by IDE Bridge"
 )
 @click.option(
     "--max-tokens",
@@ -86,28 +82,25 @@ def config_group():
 @click.option(
     "--provider",
     type=click.Choice(
-        ['openai-compatible', 'anthropic', 'bedrock', 'azure-openai', 'ide-bridge'],
+        ['ide-bridge'],
         case_sensitive=False,
     ),
-    help=(
-        "LLM provider type (default: openai-compatible). "
-        "Use 'ide-bridge' to exchange prompts/results through local files."
-    ),
+    help="LLM provider type. This build supports only 'ide-bridge'.",
 )
 @click.option(
     "--aws-region",
     type=str,
-    help="AWS region for Bedrock provider (default: us-east-1)"
+    help="Reserved for older API-backed configs; not used by IDE Bridge"
 )
 @click.option(
     "--api-version",
     type=str,
-    help="Azure OpenAI API version (default: 2024-12-01-preview)"
+    help="Reserved for older API-backed configs; not used by IDE Bridge"
 )
 @click.option(
     "--azure-deployment",
     type=str,
-    help="Azure OpenAI deployment name"
+    help="Reserved for older API-backed configs; not used by IDE Bridge"
 )
 def config_set(
     api_key: Optional[str],
@@ -127,25 +120,11 @@ def config_set(
     """
     Set configuration values for CodeWiki.
     
-    API keys are stored securely in your system keychain:
-      - macOS: Keychain Access
-      - Windows: Credential Manager
-      - Linux: Secret Service (GNOME Keyring, KWallet)
-    
     Examples:
-
-    \b
-    # Set all configuration (API mode)
-    $ codewiki config set --api-key sk-abc123 --base-url https://api.anthropic.com \\
-        --main-model claude-sonnet-4 --cluster-model claude-sonnet-4 --fallback-model glm-4p5
 
     \b
     # IDE Bridge mode - no API key needed; prompts are written to task files
     $ codewiki config set --provider ide-bridge
-
-    \b
-    # Update only API key
-    $ codewiki config set --api-key sk-new-key
 
     \b
     # Set max tokens for LLM response
@@ -169,19 +148,19 @@ def config_set(
         validated_data = {}
         
         if api_key:
-            validated_data['api_key'] = validate_api_key(api_key)
-        
+            validated_data['api_key'] = api_key
+
         if base_url:
-            validated_data['base_url'] = validate_url(base_url)
-        
+            validated_data['base_url'] = base_url
+
         if main_model:
-            validated_data['main_model'] = validate_model_name(main_model)
-        
+            validated_data['main_model'] = main_model
+
         if cluster_model:
-            validated_data['cluster_model'] = validate_model_name(cluster_model)
-        
+            validated_data['cluster_model'] = cluster_model
+
         if fallback_model:
-            validated_data['fallback_model'] = validate_model_name(fallback_model)
+            validated_data['fallback_model'] = fallback_model
         
         if max_tokens is not None:
             if max_tokens < 1:
@@ -255,17 +234,6 @@ def config_set(
         if cluster_model:
             click.secho(f"✓ Cluster model: {cluster_model}", fg="green")
             
-            # Warn if not using top-tier model for clustering
-            if not is_top_tier_model(cluster_model):
-                click.secho(
-                    "\n⚠️  Cluster model is not a top-tier LLM. "
-                    "Documentation quality may be suboptimal.",
-                    fg="yellow"
-                )
-                click.echo(
-                    "   Recommended models: claude-opus, claude-sonnet-4, gpt-4, gpt-4-turbo"
-                )
-        
         if fallback_model:
             click.secho(f"✓ Fallback model: {fallback_model}", fg="green")
         
@@ -330,9 +298,7 @@ def config_show(output_json: bool):
         
         if not manager.load():
             click.secho("\n✗ Configuration not found.", fg="red", err=True)
-            click.echo("\nPlease run 'codewiki config set' to configure your API credentials:")
-            click.echo("  codewiki config set --api-key <key> --base-url <url> \\")
-            click.echo("    --main-model <model> --cluster-model <model> --fallback-model <model>")
+            click.echo("\nPlease run 'codewiki config set --provider ide-bridge'.")
             click.echo("\nFor more help: codewiki config set --help")
             sys.exit(EXIT_CONFIG_ERROR)
         
@@ -344,7 +310,7 @@ def config_show(output_json: bool):
             output = {
                 "api_key": mask_api_key(api_key) if api_key else "Not set",
                 "api_key_storage": "keychain" if manager.keyring_available else "encrypted_file",
-                "provider": config.provider if config else "openai-compatible",
+                "provider": config.provider if config else "ide-bridge",
                 "base_url": config.base_url if config else "",
                 "main_model": config.main_model if config else "",
                 "cluster_model": config.cluster_model if config else "",
@@ -381,22 +347,13 @@ def config_show(output_json: bool):
                 click.secho("  API Key:          Not set", fg="yellow")
 
             click.echo()
-            click.secho("API Settings", fg="cyan", bold=True)
+            click.secho("Bridge Settings", fg="cyan", bold=True)
             if config:
                 click.echo(f"  Provider:         {config.provider}")
                 click.echo(f"  Main Model:       {config.main_model or 'Not set'}")
                 if ide_bridge_mode:
                     click.echo("  Bridge Tasks:     <output>/.codewiki/ide_bridge/tasks")
                     click.echo("  Bridge Results:   <output>/.codewiki/ide_bridge/results")
-                else:
-                    click.echo(f"  Base URL:         {config.base_url or 'Not set'}")
-                    click.echo(f"  Cluster Model:    {config.cluster_model or 'Not set'}")
-                    click.echo(f"  Fallback Model:   {config.fallback_model or 'Not set'}")
-                    if config.provider == "bedrock":
-                        click.echo(f"  AWS Region:       {config.aws_region}")
-                    elif config.provider == "azure-openai":
-                        click.echo(f"  API Version:      {config.api_version}")
-                        click.echo(f"  Azure Deployment: {config.azure_deployment or 'Not set'}")
             else:
                 click.secho("  Not configured", fg="yellow")
             
@@ -446,7 +403,7 @@ def config_show(output_json: bool):
 @click.option(
     "--quick",
     is_flag=True,
-    help="Skip API connectivity test"
+    help="Kept for compatibility; validation is local-only in IDE Bridge mode"
 )
 @click.option(
     "--verbose",
@@ -456,18 +413,17 @@ def config_show(output_json: bool):
 )
 def config_validate(quick: bool, verbose: bool):
     """
-    Validate configuration and test LLM API connectivity.
+    Validate IDE Bridge configuration.
     
     Checks:
       - Configuration file exists and is valid
-      - API key is present
-      - API settings are correctly formatted
-      - (Optional) API connectivity test
+      - IDE Bridge provider is selected
+      - Task/result file workflow is available
     
     Examples:
     
     \b
-    # Full validation with API test
+    # Full validation
     $ codewiki config validate
     
     \b
@@ -487,7 +443,7 @@ def config_validate(quick: bool, verbose: bool):
         
         # Step 1: Check config file
         if verbose:
-            click.echo("[1/5] Checking configuration file...")
+            click.echo("[1/3] Checking configuration file...")
             click.echo(f"      Path: {manager.config_file_path}")
         
         if not manager.load():
@@ -502,148 +458,30 @@ def config_validate(quick: bool, verbose: bool):
         else:
             click.secho("✓ Configuration file exists", fg="green")
         
-        # Load config early so we know the provider for the rest of the checks.
         config = manager.get_config()
-        from codewiki.src.be.backend import is_api_keyless_provider, is_ide_bridge_provider
-        ide_bridge_mode = bool(config) and is_ide_bridge_provider(config.provider)
-        api_keyless_mode = bool(config) and is_api_keyless_provider(config.provider)
+        if not config or config.provider != "ide-bridge":
+            click.secho("✗ Unsupported provider. Use: codewiki config set --provider ide-bridge", fg="red")
+            sys.exit(EXIT_CONFIG_ERROR)
 
-        # Step 2: Check API key (skipped for IDE Bridge provider)
+        # Step 2: Check provider
         if verbose:
             click.echo()
-            click.echo("[2/5] Checking API key...")
-
-        if api_keyless_mode:
-            if verbose:
-                click.secho("      ✓ API key not required (IDE Bridge mode)", fg="green")
-            else:
-                click.secho("✓ API key not required (IDE Bridge mode)", fg="green")
+            click.echo("[2/3] Checking provider...")
+            click.secho("      ✓ Provider: ide-bridge", fg="green")
         else:
-            if verbose:
-                storage = "system keychain" if manager.keyring_available else "encrypted file"
-                click.echo(f"      Storage: {storage}")
+            click.secho("✓ Provider: ide-bridge", fg="green")
 
-            api_key = manager.get_api_key()
-            if not api_key:
-                click.secho("✗ API key missing", fg="red")
-                click.echo()
-                click.echo("Error: API key not set. Run 'codewiki config set --api-key <key>'")
-                sys.exit(EXIT_CONFIG_ERROR)
-
-            if verbose:
-                click.secho(f"      ✓ API key retrieved", fg="green")
-                click.secho(f"      ✓ Length: {len(api_key)} characters", fg="green")
-            else:
-                click.secho("✓ API key present (stored in keychain)", fg="green")
-
-        # Step 3: Check base URL (skipped for IDE Bridge provider)
+        # Step 3: Check IDE Bridge mode
         if verbose:
             click.echo()
-            click.echo("[3/5] Checking base URL...")
-
-        if api_keyless_mode:
-            if verbose:
-                click.secho("      ✓ Base URL not required (IDE Bridge mode)", fg="green")
-            else:
-                click.secho("✓ Base URL not required (IDE Bridge mode)", fg="green")
+            click.echo("[3/3] Checking IDE Bridge mode...")
+            click.secho("      ✓ API key not required", fg="green")
+            click.secho("      ✓ Base URL not required", fg="green")
+            click.secho("      ✓ Model configuration not required", fg="green")
+            click.secho("      ✓ Tasks will be written under <output>/.codewiki/ide_bridge/tasks", fg="green")
+            click.secho("      ↳ Complete each task in your AI IDE and save results under the matching results path.", fg="cyan")
         else:
-            if verbose:
-                click.echo(f"      URL: {config.base_url}")
-
-            if not config.base_url:
-                click.secho("✗ Base URL not set", fg="red")
-                sys.exit(EXIT_CONFIG_ERROR)
-
-            try:
-                validate_url(config.base_url)
-                if verbose:
-                    click.secho("      ✓ Valid HTTPS URL", fg="green")
-                else:
-                    click.secho(f"✓ Base URL valid: {config.base_url}", fg="green")
-            except ConfigurationError as e:
-                click.secho(f"✗ Invalid base URL: {e.message}", fg="red")
-                sys.exit(EXIT_CONFIG_ERROR)
-        
-        # Step 4: Check models
-        if verbose:
-            click.echo()
-            click.echo("[4/5] Checking model configuration...")
-            click.echo(f"      Main model: {config.main_model}")
-            if not api_keyless_mode:
-                click.echo(f"      Cluster model: {config.cluster_model}")
-                click.echo(f"      Fallback model: {config.fallback_model}")
-
-        if ide_bridge_mode:
-            if verbose:
-                click.secho("      ✓ Model configuration not required", fg="green")
-            else:
-                click.secho("✓ Model configuration not required (IDE Bridge mode)", fg="green")
-        else:
-            if not config.main_model or not config.cluster_model or not config.fallback_model:
-                click.secho("✗ Models not configured", fg="red")
-                sys.exit(EXIT_CONFIG_ERROR)
-
-            if verbose:
-                click.secho("      ✓ Models configured", fg="green")
-            else:
-                click.secho(f"✓ Main model configured: {config.main_model}", fg="green")
-                click.secho(f"✓ Cluster model configured: {config.cluster_model}", fg="green")
-                click.secho(f"✓ Fallback model configured: {config.fallback_model}", fg="green")
-
-            # Warn about non-top-tier cluster model
-            if not is_top_tier_model(config.cluster_model):
-                click.secho(
-                    "⚠️  Cluster model is not top-tier. Consider using claude-sonnet-4 or gpt-4.",
-                    fg="yellow"
-                )
-
-        # Step 5: API connectivity test (unless --quick)
-        if ide_bridge_mode:
-            if verbose:
-                click.echo()
-                click.echo("[5/5] Checking IDE Bridge mode...")
-                click.secho("      ✓ Tasks will be written under <output>/.codewiki/ide_bridge/tasks", fg="green")
-                click.secho("      ↳ Complete each task in your AI IDE and save results under the matching results path.", fg="cyan")
-            else:
-                click.secho("✓ IDE Bridge mode ready", fg="green")
-        elif not quick:
-            if verbose:
-                click.echo()
-                click.echo("[5/5] Testing API connectivity...")
-                click.echo(f"      URL: {config.base_url}")
-
-            try:
-                base_url_lower = (config.base_url or "").lower()
-                provider = getattr(config, 'provider', 'openai-compatible')
-                if provider == "azure-openai" or ".openai.azure.com" in base_url_lower:
-                    # Use Azure OpenAI SDK
-                    from openai import AzureOpenAI
-                    client = AzureOpenAI(
-                        api_key=api_key,
-                        api_version=config.api_version,
-                        azure_endpoint=config.base_url,
-                    )
-                    client.models.list()
-                elif "api.anthropic.com" in base_url_lower:
-                    # Use Anthropic SDK for native Anthropic endpoints
-                    import anthropic
-                    client = anthropic.Anthropic(api_key=api_key)
-                    client.models.list(limit=1)
-                else:
-                    # Use OpenAI SDK for OpenAI-compatible endpoints
-                    from openai import OpenAI
-                    client = OpenAI(api_key=api_key, base_url=config.base_url)
-                    client.models.list()
-
-                if verbose:
-                    click.secho("      ✓ API responded successfully", fg="green")
-                else:
-                    click.secho("✓ API connectivity test successful", fg="green")
-            except Exception as e:
-                click.secho("✗ API connectivity test failed", fg="red")
-                if verbose:
-                    click.echo(f"      Error: {e}")
-                sys.exit(EXIT_CONFIG_ERROR)
+            click.secho("✓ IDE Bridge mode ready", fg="green")
         
         # Success
         click.echo()
@@ -742,7 +580,7 @@ def config_agent(
         
         if not manager.load():
             click.secho("\n✗ Configuration not found.", fg="red", err=True)
-            click.echo("\nPlease run 'codewiki config set' first to configure your API credentials.")
+            click.echo("\nPlease run 'codewiki config set --provider ide-bridge' first.")
             sys.exit(EXIT_CONFIG_ERROR)
         
         config = manager.get_config()

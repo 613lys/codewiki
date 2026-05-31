@@ -55,11 +55,8 @@ def cluster_modules(
     Cluster the potential core components into modules.
 
     Args:
-        completer: optional ``(prompt: str) -> str`` callable.  When provided,
-            clustering calls go through this completer instead of the legacy
-            ``call_llm``.  This is how the LLMBackend abstraction injects
-            IDE Bridge task generation.  If ``None``, falls back to ``call_llm``
-            for backward compatibility with direct API callers.
+        completer: ``(prompt: str) -> str`` callable. IDE Bridge injects task
+            generation here instead of calling an API model directly.
     """
     potential_core_components, potential_core_components_with_code = format_potential_core_components(leaf_nodes, components)
 
@@ -68,11 +65,9 @@ def cluster_modules(
         return {}
 
     prompt = format_cluster_prompt(potential_core_components, current_module_tree, current_module_name)
-    if completer is not None:
-        response = completer(prompt)
-    else:
-        from codewiki.src.be.llm_services import call_llm
-        response = call_llm(prompt, config, model=config.cluster_model)
+    if completer is None:
+        raise ValueError("cluster_modules requires a completer")
+    response = completer(prompt)
 
     #parse the response
     try:

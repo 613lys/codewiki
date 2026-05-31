@@ -52,13 +52,6 @@ build-requires = [
 ]
 
 [project.optional-dependencies]
-api = [
-    "openai>=1.107.0",
-    "litellm>=1.77.0",
-    "pydantic-ai>=1.0.6",
-    "anthropic>=0.67.0",
-    "boto3>=1.40.2",
-]
 mermaid = [
     "mermaid-py>=0.8.0",
     "mermaid-parser-py>=0.0.2; python_version < '3.12'",
@@ -74,11 +67,6 @@ mcp = [
     "mcp>=1.12.3",
 ]
 all = [
-    "openai>=1.107.0",
-    "litellm>=1.77.0",
-    "pydantic-ai>=1.0.6",
-    "anthropic>=0.67.0",
-    "boto3>=1.40.2",
     "mcp>=1.12.3",
     "mermaid-py>=0.8.0",
     "mermaid-parser-py>=0.0.2; python_version < '3.12'",
@@ -116,7 +104,6 @@ packages = [
     "codewiki.cli.adapters",
     "codewiki.src",
     "codewiki.src.be",
-    "codewiki.src.be.agent_tools",
     "codewiki.src.be.dependency_analyzer",
     "codewiki.src.be.dependency_analyzer.analysis",
     "codewiki.src.be.dependency_analyzer.analyzers",

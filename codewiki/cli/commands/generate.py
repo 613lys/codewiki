@@ -534,7 +534,7 @@ def generate_command(
                 'fallback_model': config.fallback_model,
                 'base_url': config.base_url,
                 'api_key': api_key,
-                'provider': getattr(config, 'provider', 'openai-compatible'),
+                'provider': getattr(config, 'provider', 'ide-bridge'),
                 'aws_region': getattr(config, 'aws_region', 'us-east-1'),
                 'agent_instructions': agent_instructions_dict,
                 # Max token settings (runtime overrides take precedence)
@@ -601,4 +601,3 @@ def generate_command(
         sys.exit(130)
     except Exception as e:
         sys.exit(handle_error(e, verbose=verbose))
-

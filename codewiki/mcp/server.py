@@ -189,7 +189,7 @@ async def _handle_generate_docs(arguments: dict[str, Any]) -> list[TextContent]:
         main_model=config.main_model,
         cluster_model=config.cluster_model,
         fallback_model=config.fallback_model,
-        provider=getattr(config, "provider", "openai-compatible"),
+        provider=getattr(config, "provider", "ide-bridge"),
         aws_region=getattr(config, "aws_region", "us-east-1"),
         max_tokens=config.max_tokens,
         agent_instructions=agent_instructions or None,

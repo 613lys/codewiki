@@ -34,14 +34,13 @@ def is_cli_context() -> bool:
     """Check if running in CLI context."""
     return _CLI_CONTEXT
 
-# LLM services
-# In CLI mode, these will be loaded from ~/.codewiki/config.json + keyring
-# In web app mode, use environment variables
-MAIN_MODEL = os.getenv('MAIN_MODEL', 'claude-sonnet-4')
-FALLBACK_MODEL_1 = os.getenv('FALLBACK_MODEL_1', 'glm-4p5')
+# Model names are kept as task metadata only. This build does not call model
+# APIs directly; IDE Bridge writes prompts to task files for an external AI IDE.
+MAIN_MODEL = os.getenv('MAIN_MODEL', 'ide-bridge')
+FALLBACK_MODEL_1 = os.getenv('FALLBACK_MODEL_1', '')
 CLUSTER_MODEL = os.getenv('CLUSTER_MODEL', MAIN_MODEL)
-LLM_BASE_URL = os.getenv('LLM_BASE_URL', 'http://0.0.0.0:4000/')
-LLM_API_KEY = os.getenv('LLM_API_KEY', 'sk-1234')
+LLM_BASE_URL = os.getenv('LLM_BASE_URL', '')
+LLM_API_KEY = os.getenv('LLM_API_KEY', '')
 
 @dataclass
 class Config:
@@ -58,10 +57,10 @@ class Config:
     cluster_model: str
     fallback_model: str = FALLBACK_MODEL_1
     # Provider configuration
-    provider: str = "openai-compatible"  # openai-compatible, anthropic, bedrock, azure-openai
+    provider: str = "ide-bridge"
     aws_region: str = "us-east-1"
-    api_version: str = "2024-12-01-preview"  # Azure OpenAI API version
-    azure_deployment: str = ""  # Azure OpenAI deployment name
+    api_version: str = "2024-12-01-preview"  # Reserved for older API-backed configs
+    azure_deployment: str = ""  # Reserved for older API-backed configs
     # Max token settings
     max_tokens: int = DEFAULT_MAX_TOKENS
     max_token_per_module: int = DEFAULT_MAX_TOKEN_PER_MODULE
@@ -160,7 +159,7 @@ class Config:
         main_model: str,
         cluster_model: str,
         fallback_model: str = FALLBACK_MODEL_1,
-        provider: str = "openai-compatible",
+        provider: str = "ide-bridge",
         aws_region: str = "us-east-1",
         api_version: str = "2024-12-01-preview",
         azure_deployment: str = "",
@@ -181,10 +180,10 @@ class Config:
             main_model: Primary model
             cluster_model: Clustering model
             fallback_model: Fallback model
-            provider: LLM provider type (openai-compatible, anthropic, bedrock, azure-openai)
-            aws_region: AWS region for Bedrock provider
-            api_version: Azure OpenAI API version
-            azure_deployment: Azure OpenAI deployment name
+            provider: LLM provider type. This build supports ide-bridge.
+            aws_region: Reserved for older API-backed configs
+            api_version: Reserved for older API-backed configs
+            azure_deployment: Reserved for older API-backed configs
             max_tokens: Maximum tokens for LLM response
             max_token_per_module: Maximum tokens per module for clustering
             max_token_per_leaf_module: Maximum tokens per leaf module
