@@ -177,11 +177,9 @@ class IDEBridgeBackend(LLMBackend):
 
         return (
             "# CodeWiki IDE Bridge Task\n\n"
-            "You are working inside an AI IDE with access to the repository files. "
-            "Do not treat this task file as the only source of truth; read the referenced "
-            "source files directly from the workspace.\n\n"
             "## Goal\n\n"
-            f"Generate architecture documentation for module `{module_name}`.\n\n"
+            f"Read the source files listed below and generate architecture documentation "
+            f"for module `{module_name}`.\n\n"
             "## Output Contract\n\n"
             f"- Write only the final markdown document to `{result_path}`.\n"
             f"- CodeWiki will copy that result into `{docs_path}` on the next run.\n"
@@ -189,6 +187,22 @@ class IDEBridgeBackend(LLMBackend):
             "- Include Mermaid diagrams where they clarify architecture, dependencies, data flow, or user flow.\n"
             "- Link to related module docs when they exist instead of duplicating their content.\n"
             "- Keep the document useful to a developer maintaining this repository.\n\n"
+            "## Required Output Format\n\n"
+            f"# {module_name}\n\n"
+            "## Purpose\n\n"
+            "Explain what this module/system does and why it exists.\n\n"
+            "## Architecture\n\n"
+            "Describe the main architectural structure. Include a Mermaid diagram if useful.\n\n"
+            "## Components\n\n"
+            "List the important components and explain each responsibility.\n\n"
+            "## Runtime Flows\n\n"
+            "Describe key flows such as request handling, authentication, report generation, export, or data persistence. Include sequence/data-flow diagrams where useful.\n\n"
+            "## Data Model\n\n"
+            "Summarize important entities, DTOs, persistence tables, and relationships if present.\n\n"
+            "## Integration Points\n\n"
+            "Describe frontend/backend/API/database/test integrations if present.\n\n"
+            "## Maintenance Notes\n\n"
+            "Call out extension points, operational assumptions, and risks a maintainer should know.\n\n"
             "## Repository Context\n\n"
             f"- Repository root: `{repo_root}`\n"
             f"- Documentation output directory: `{Path(working_dir).resolve()}`\n"
@@ -200,14 +214,6 @@ class IDEBridgeBackend(LLMBackend):
             + "\n"
             + custom_section
             + missing_section
-            + "\n## Suggested Documentation Shape\n\n"
-            "1. Purpose and scope\n"
-            "2. High-level architecture\n"
-            "3. Main components and responsibilities\n"
-            "4. Important runtime flows\n"
-            "5. Data model and persistence notes, if relevant\n"
-            "6. Security/authentication notes, if relevant\n"
-            "7. Extension and maintenance notes\n"
         )
 
     @staticmethod
