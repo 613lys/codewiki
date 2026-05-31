@@ -34,7 +34,7 @@ def format_potential_core_components(leaf_nodes: List[str], components: Dict[str
     for file, leaf_nodes in dict(sorted(leaf_nodes_by_file.items())).items():
         potential_core_components += f"# {file}\n"
         potential_core_components_with_code += f"# {file}\n"
-        for leaf_node in leaf_nodes:
+        for leaf_node in sorted(leaf_nodes):
             potential_core_components += f"\t{leaf_node}\n"
             potential_core_components_with_code += f"\t{leaf_node}\n"
             potential_core_components_with_code += f"{components[leaf_node].source_code}\n"
