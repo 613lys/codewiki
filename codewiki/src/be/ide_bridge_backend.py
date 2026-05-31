@@ -20,6 +20,11 @@ from typing import Any, Dict, List
 
 from codewiki.src.be.backend import IDEBridgePendingTask, LLMBackend
 from codewiki.src.be.dependency_analyzer.models.core import Node
+from codewiki.src.be.prompt_template import (
+    format_leaf_system_prompt,
+    format_system_prompt,
+)
+from codewiki.src.be.utils import is_complex_module
 from codewiki.src.config import MODULE_TREE_FILENAME, OVERVIEW_FILENAME, Config
 from codewiki.src.utils import file_manager
 
@@ -174,6 +179,19 @@ class IDEBridgeBackend(LLMBackend):
             )
 
         module_tree_path = Path(working_dir) / MODULE_TREE_FILENAME
+        formatted_module_tree = json.dumps(module_tree, indent=2)
+        system_prompt = self._format_original_system_prompt(
+            module_name=module_name,
+            components=components,
+            core_component_ids=core_component_ids,
+        )
+        user_prompt = self._format_ide_user_prompt(
+            module_name=module_name,
+            formatted_module_tree=formatted_module_tree,
+            source_references="\n".join(source_lines)
+            if source_lines
+            else "No source files were provided by analysis.",
+        )
 
         return (
             "# CodeWiki IDE Bridge Task\n\n"
@@ -203,6 +221,21 @@ class IDEBridgeBackend(LLMBackend):
             "Describe frontend/backend/API/database/test integrations if present.\n\n"
             "## Maintenance Notes\n\n"
             "Call out extension points, operational assumptions, and risks a maintainer should know.\n\n"
+            "## Original CodeWiki System Prompt\n\n"
+            "The original CodeWiki documentation prompt is preserved below. "
+            "In IDE Bridge mode, runtime tools such as `str_replace_editor`, "
+            "`read_code_components`, and `generate_sub_module_documentation` are not available; "
+            "use your IDE file access instead and write the final markdown to the result path.\n\n"
+            "```text\n"
+            f"{system_prompt}\n"
+            "```\n\n"
+            "## Original CodeWiki User Prompt, IDE Bridge Input\n\n"
+            "This preserves the original module-tree and cross-reference instructions. "
+            "`CORE_COMPONENT_CODES` is intentionally represented as file/component references "
+            "so the AI IDE can read source files directly from the workspace.\n\n"
+            "```text\n"
+            f"{user_prompt}\n"
+            "```\n\n"
             "## Repository Context\n\n"
             f"- Repository root: `{repo_root}`\n"
             f"- Documentation output directory: `{Path(working_dir).resolve()}`\n"
@@ -214,6 +247,42 @@ class IDEBridgeBackend(LLMBackend):
             + "\n"
             + custom_section
             + missing_section
+        )
+
+    def _format_original_system_prompt(
+        self,
+        *,
+        module_name: str,
+        components: Dict[str, Node],
+        core_component_ids: List[str],
+    ) -> str:
+        custom_instructions = self._config.get_prompt_addition()
+        if is_complex_module(components, core_component_ids):
+            return format_system_prompt(module_name, custom_instructions)
+        return format_leaf_system_prompt(module_name, custom_instructions)
+
+    @staticmethod
+    def _format_ide_user_prompt(
+        *,
+        module_name: str,
+        formatted_module_tree: str,
+        source_references: str,
+    ) -> str:
+        return (
+            f"Generate comprehensive documentation for the {module_name} module "
+            "using the provided module tree and core components.\n\n"
+            "<MODULE_TREE>\n"
+            f"{formatted_module_tree}\n"
+            "</MODULE_TREE>\n"
+            "* NOTE: You can refer the other modules in the module tree based on the "
+            "dependencies between their core components to make the documentation more "
+            "structured and avoid repeating the same information. Know that all "
+            "documentation files are saved in the same folder not structured as module "
+            "tree. e.g. [alt text]([ref_module_name].md)\n\n"
+            "<CORE_COMPONENT_CODES>\n"
+            "Source code is not embedded in IDE Bridge mode. Read these files from the workspace:\n\n"
+            f"{source_references}\n"
+            "</CORE_COMPONENT_CODES>"
         )
 
     @staticmethod
