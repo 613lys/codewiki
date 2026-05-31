@@ -401,6 +401,7 @@
         const CONFIG = {{CONFIG_JSON}};
         const MODULE_TREE = {{MODULE_TREE_JSON}};
         const METADATA = {{METADATA_JSON}};
+        const DOCS_CONTENT = {{DOCS_CONTENT_JSON}};
         const DOCS_BASE_PATH = '{{DOCS_BASE_PATH}}';
         
         // Initialize marked with options
@@ -507,13 +508,15 @@
             content.style.display = 'none';
             
             try {
-                const docPath = DOCS_BASE_PATH ? `${DOCS_BASE_PATH}/${filename}` : filename;
-                const response = await fetch(docPath);
-                if (!response.ok) {
-                    throw new Error(`Failed to load ${filename}`);
+                let markdown = DOCS_CONTENT && DOCS_CONTENT[filename];
+                if (typeof markdown !== 'string') {
+                    const docPath = DOCS_BASE_PATH ? `${DOCS_BASE_PATH}/${filename}` : filename;
+                    const response = await fetch(docPath);
+                    if (!response.ok) {
+                        throw new Error(`Failed to load ${filename}`);
+                    }
+                    markdown = await response.text();
                 }
-                
-                const markdown = await response.text();
                 const html = await renderMarkdown(markdown);
                 
                 content.innerHTML = html;
@@ -640,4 +643,3 @@
     </script>
 </body>
 </html>
-

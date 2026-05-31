@@ -148,6 +148,11 @@ class HTMLGenerator:
         config_json = json.dumps(config, indent=2)
         module_tree_json = json.dumps(module_tree, indent=2)
         metadata_json = json.dumps(metadata, indent=2) if metadata else "null"
+        docs_content_json = json.dumps(
+            self._load_markdown_documents(docs_dir or output_path.parent),
+            ensure_ascii=False,
+            indent=2,
+        )
         
         # Replace placeholders
         html_content = template_content
@@ -159,6 +164,7 @@ class HTMLGenerator:
             "{{CONFIG_JSON}}": config_json,
             "{{MODULE_TREE_JSON}}": module_tree_json,
             "{{METADATA_JSON}}": metadata_json,
+            "{{DOCS_CONTENT_JSON}}": docs_content_json,
             "{{DOCS_BASE_PATH}}": docs_base_path,
         }
         
@@ -169,6 +175,23 @@ class HTMLGenerator:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         safe_write(output_path, html_content)
+
+    def _load_markdown_documents(self, docs_dir: Path) -> Dict[str, str]:
+        """
+        Load markdown documents into the viewer so index.html works when opened
+        directly from the filesystem, where browser fetch() may be blocked.
+        """
+        docs: Dict[str, str] = {}
+        if not docs_dir or not docs_dir.exists():
+            return docs
+
+        for path in sorted(docs_dir.glob("*.md")):
+            try:
+                docs[path.name] = safe_read(path)
+            except Exception:
+                continue
+
+        return docs
     
     def _build_info_content(self, metadata: Optional[Dict[str, Any]]) -> str:
         """
@@ -281,4 +304,3 @@ class HTMLGenerator:
             pass
         
         return info
-
