@@ -209,7 +209,7 @@ class ModuleProgressBar:
         self.current_module += 1
         
         if self.verbose:
-            status = "✓ (cached)" if cached else "⟳ (generating)"
+            status = "OK (cached)" if cached else "... (generating)"
             click.echo(f"  [{self.current_module}/{self.total_modules}] {module_name}... {status}")
         elif self.bar:
             self.bar.update(1)
@@ -219,4 +219,3 @@ class ModuleProgressBar:
         if self.bar:
             self.bar.__exit__(None, None, None)
             self.bar = None
-

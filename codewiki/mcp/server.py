@@ -42,7 +42,7 @@ server = Server("codewiki")
 
 
 def _load_config():
-    """Load CodeWiki configuration from ~/.codewiki/config.json + keyring."""
+    """Load CodeWiki configuration from ~/.codewiki/config.json."""
     from codewiki.cli.config_manager import ConfigManager
     manager = ConfigManager()
     if not manager.load():
@@ -162,12 +162,8 @@ async def _handle_generate_docs(arguments: dict[str, Any]) -> list[TextContent]:
     # Load config
     manager = _load_config()
     config = manager.get_config()
-    api_key = manager.get_api_key()
-
-    from codewiki.src.be.backend import is_api_keyless_provider
-    api_keyless_mode = bool(config) and is_api_keyless_provider(getattr(config, "provider", ""))
-    if not api_key and not api_keyless_mode:
-        return [TextContent(type="text", text="API key not configured. Run 'codewiki config set --api-key <key>'")]
+    if not config or getattr(config, "provider", "ide-bridge") != "ide-bridge":
+        return [TextContent(type="text", text="Unsupported provider. Run 'codewiki config set --provider ide-bridge'")]
 
     # Build agent instructions from arguments
     agent_instructions = {}
@@ -184,13 +180,9 @@ async def _handle_generate_docs(arguments: dict[str, Any]) -> list[TextContent]:
     backend_config = BackendConfig.from_cli(
         repo_path=str(repo_path),
         output_dir=str(output_dir),
-        llm_base_url=config.base_url,
-        llm_api_key=api_key,
         main_model=config.main_model,
         cluster_model=config.cluster_model,
-        fallback_model=config.fallback_model,
         provider=getattr(config, "provider", "ide-bridge"),
-        aws_region=getattr(config, "aws_region", "us-east-1"),
         max_tokens=config.max_tokens,
         agent_instructions=agent_instructions or None,
     )
@@ -225,7 +217,6 @@ async def _handle_analyze_repo(arguments: dict[str, Any]) -> list[TextContent]:
 
     manager = _load_config()
     config = manager.get_config()
-    api_key = manager.get_api_key()
 
     from codewiki.src.config import Config as BackendConfig, set_cli_context
     set_cli_context(True)
@@ -234,11 +225,8 @@ async def _handle_analyze_repo(arguments: dict[str, Any]) -> list[TextContent]:
     backend_config = BackendConfig.from_cli(
         repo_path=str(repo_path),
         output_dir=str(repo_path / ".codewiki_temp"),
-        llm_base_url=config.base_url or "http://localhost",
-        llm_api_key=api_key or "not-needed",
         main_model=config.main_model or "unused",
         cluster_model=config.cluster_model or "unused",
-        fallback_model=config.fallback_model or "unused",
     )
 
     from codewiki.src.be.dependency_analyzer import DependencyGraphBuilder

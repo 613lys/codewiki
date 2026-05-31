@@ -435,13 +435,13 @@ class DocumentationGenerator:
         # check if overview docs already exists
         overview_docs_path = os.path.join(working_dir, OVERVIEW_FILENAME)
         if os.path.exists(overview_docs_path):
-            logger.info(f"✓ Overview docs already exists at {overview_docs_path}")
+            logger.info(f"OK Overview docs already exists at {overview_docs_path}")
             return module_tree
 
         # check if parent docs already exists
         parent_docs_path = os.path.join(working_dir, f"{module_name if len(module_path) >= 1 else OVERVIEW_FILENAME.replace('.md', '')}.md")
         if os.path.exists(parent_docs_path):
-            logger.info(f"✓ Parent docs already exists at {parent_docs_path}")
+            logger.info(f"OK Parent docs already exists at {parent_docs_path}")
             return module_tree
 
         # Create repo structure with 1-depth children docs and target indicator
@@ -525,7 +525,7 @@ class DocumentationGenerator:
             self.create_documentation_metadata(working_dir, components, len(leaf_nodes))
             
             logger.debug(f"Documentation generation completed successfully using dynamic programming!")
-            logger.debug(f"Processing order: leaf modules → parent modules → repository overview")
+            logger.debug("Processing order: leaf modules -> parent modules -> repository overview")
             logger.debug(f"Documentation saved to: {working_dir}")
             
         except Exception as e:

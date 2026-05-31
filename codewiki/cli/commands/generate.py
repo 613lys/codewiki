@@ -63,7 +63,7 @@ def _detect_changed_files(
     metadata_path = output_dir / "metadata.json"
     if not metadata_path.exists():
         if verbose:
-            logger.debug("No metadata.json found — cannot detect changes, running full generation.")
+            logger.debug("No metadata.json found - cannot detect changes, running full generation.")
         return None
 
     try:
@@ -71,7 +71,7 @@ def _detect_changed_files(
         prev_commit = metadata.get("generation_info", {}).get("commit_id")
         if not prev_commit:
             if verbose:
-                logger.debug("No commit_id in metadata — running full generation.")
+                logger.debug("No commit_id in metadata - running full generation.")
             return None
     except (json.JSONDecodeError, OSError):
         return None
@@ -83,27 +83,27 @@ def _detect_changed_files(
         current_commit = repo.head.commit.hexsha
     except Exception:
         if verbose:
-            logger.debug("Cannot access git repo — running full generation.")
+            logger.debug("Cannot access git repo - running full generation.")
         return None
 
     if prev_commit == current_commit:
         if verbose:
-            logger.debug(f"HEAD is still at {current_commit[:8]} — no changes.")
+            logger.debug(f"HEAD is still at {current_commit[:8]} - no changes.")
         return []
 
     # Determine subdirectory prefix relative to the git root
     if repo.working_tree_dir is None:
         if verbose:
-            logger.debug("Bare git repository — running full generation.")
+            logger.debug("Bare git repository - running full generation.")
         return None
     git_root = Path(repo.working_tree_dir).resolve()
     repo_path_resolved = repo_path.resolve()
     try:
         subpath_prefix = repo_path_resolved.relative_to(git_root).as_posix()
     except ValueError:
-        # repo_path is outside git root — shouldn't happen, but fall back to full generation
+        # repo_path is outside git root; fall back to full generation
         if verbose:
-            logger.debug("Repo path is outside git root — running full generation.")
+            logger.debug("Repo path is outside git root - running full generation.")
         return None
 
     # Get changed files between previous and current commit
@@ -139,7 +139,7 @@ def _detect_changed_files(
         return filtered
     except Exception as e:
         if verbose:
-            logger.debug(f"Git diff failed: {e} — running full generation.")
+            logger.debug(f"Git diff failed: {e} - running full generation.")
         return None
 
 
@@ -433,9 +433,7 @@ def generate_command(
         if not config_manager.load():
             raise ConfigurationError(
                 "Configuration not found or invalid.\n\n"
-                "Please run 'codewiki config set' to configure your LLM API credentials:\n"
-                "  codewiki config set --api-key <your-api-key> --base-url <api-url> \\\n"
-                "    --main-model <model> --cluster-model <model>\n\n"
+                "Please run 'codewiki config set --provider ide-bridge' first.\n\n"
                 "For more help: codewiki config --help"
             )
         
@@ -445,7 +443,6 @@ def generate_command(
             )
         
         config = config_manager.get_config()
-        api_key = config_manager.get_api_key()
         
         logger.success("Configuration valid")
         
@@ -483,7 +480,7 @@ def generate_command(
                 logger.success("No changes detected since last generation. Documentation is up to date.")
                 sys.exit(EXIT_SUCCESS)
             if changed_files is not None:
-                logger.info(f"  Detected {len(changed_files)} changed files — regenerating affected modules.")
+                logger.info(f"  Detected {len(changed_files)} changed files - regenerating affected modules.")
                 # Remove cached module docs for affected files so they get regenerated
                 _invalidate_affected_modules(output_dir, changed_files, logger, verbose)
 
@@ -590,11 +587,7 @@ def generate_command(
             config={
                 'main_model': config.main_model,
                 'cluster_model': config.cluster_model,
-                'fallback_model': config.fallback_model,
-                'base_url': config.base_url,
-                'api_key': api_key,
                 'provider': getattr(config, 'provider', 'ide-bridge'),
-                'aws_region': getattr(config, 'aws_region', 'us-east-1'),
                 'agent_instructions': agent_instructions_dict,
                 # Max token settings (runtime overrides take precedence)
                 'max_tokens': max_tokens if max_tokens is not None else config.max_tokens,

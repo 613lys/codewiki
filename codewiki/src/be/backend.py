@@ -29,11 +29,6 @@ def is_ide_bridge_provider(provider: str) -> bool:
     return provider in IDE_BRIDGE_PROVIDERS
 
 
-def is_api_keyless_provider(provider: str) -> bool:
-    """Return True for providers that do not require a stored API key."""
-    return is_ide_bridge_provider(provider)
-
-
 class IDEBridgePendingTask(RuntimeError):
     """Raised when one or more IDE Bridge tasks need result files."""
 

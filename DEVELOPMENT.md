@@ -64,8 +64,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 # Install minimal CLI + static analysis + IDE Bridge dependencies
 pip install -e .
 
-# Optional extras for provider-specific development
-pip install -e ".[api]"      # OpenAI-compatible, Anthropic, Bedrock, Azure
+# Optional extras
 pip install -e ".[web]"      # FastAPI web UI
 pip install -e ".[mermaid]"  # Mermaid diagram validation
 
@@ -89,13 +88,11 @@ pip install -e ".[dev]"
 - Feature-oriented module partitioning
 - Topological sorting for dependency ordering
 
-#### 3. Agent System (`src/be/backend.py`, `pydantic_ai_backend.py`, `ide_bridge_backend.py`)
+#### 3. Agent System (`src/be/backend.py`, `ide_bridge_backend.py`)
 
-- ``LLMBackend`` abstracts the API-key and IDE Bridge paths.
+- ``LLMBackend`` abstracts CodeWiki's task generation interface.
 - ``IDEBridgeBackend`` writes task files for external AI IDEs such as Windsurf.
-  It does not need OpenAI, pydantic-ai, or API keys.
-- ``PydanticAIBackend`` runs the per-module agent via pydantic-ai (used by
-  ``openai-compatible`` / ``anthropic`` / ``bedrock`` / ``azure-openai``).
+  It does not need model APIs, tokenizer downloads, or API keys.
 
 #### 4. Agent Tools (`src/be/agent_tools/`)
 

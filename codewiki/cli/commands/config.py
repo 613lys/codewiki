@@ -15,10 +15,6 @@ from codewiki.cli.utils.errors import (
     EXIT_SUCCESS,
     EXIT_CONFIG_ERROR
 )
-from codewiki.cli.utils.validation import (
-    mask_api_key
-)
-
 
 def parse_patterns(patterns_str: str) -> List[str]:
     """Parse comma-separated patterns into a list."""
@@ -35,16 +31,6 @@ def config_group():
 
 @config_group.command(name="set")
 @click.option(
-    "--api-key",
-    type=str,
-    help="Reserved for older API-backed configs; not used by IDE Bridge"
-)
-@click.option(
-    "--base-url",
-    type=str,
-    help="Reserved for older API-backed configs; not used by IDE Bridge"
-)
-@click.option(
     "--main-model",
     type=str,
     help="Optional model label stored in task metadata"
@@ -53,11 +39,6 @@ def config_group():
     "--cluster-model",
     type=str,
     help="Optional model label stored in clustering task metadata"
-)
-@click.option(
-    "--fallback-model",
-    type=str,
-    help="Reserved for older API-backed configs; not used by IDE Bridge"
 )
 @click.option(
     "--max-tokens",
@@ -87,35 +68,14 @@ def config_group():
     ),
     help="LLM provider type. This build supports only 'ide-bridge'.",
 )
-@click.option(
-    "--aws-region",
-    type=str,
-    help="Reserved for older API-backed configs; not used by IDE Bridge"
-)
-@click.option(
-    "--api-version",
-    type=str,
-    help="Reserved for older API-backed configs; not used by IDE Bridge"
-)
-@click.option(
-    "--azure-deployment",
-    type=str,
-    help="Reserved for older API-backed configs; not used by IDE Bridge"
-)
 def config_set(
-    api_key: Optional[str],
-    base_url: Optional[str],
     main_model: Optional[str],
     cluster_model: Optional[str],
-    fallback_model: Optional[str],
     max_tokens: Optional[int],
     max_token_per_module: Optional[int],
     max_token_per_leaf_module: Optional[int],
     max_depth: Optional[int],
     provider: Optional[str] = None,
-    aws_region: Optional[str] = None,
-    api_version: Optional[str] = None,
-    azure_deployment: Optional[str] = None
 ):
     """
     Set configuration values for CodeWiki.
@@ -140,27 +100,26 @@ def config_set(
     """
     try:
         # Check if at least one option is provided
-        if not any([api_key, base_url, main_model, cluster_model, fallback_model, max_tokens, max_token_per_module, max_token_per_leaf_module, max_depth, provider, aws_region, api_version, azure_deployment]):
+        if not any([
+            main_model,
+            cluster_model,
+            max_tokens,
+            max_token_per_module,
+            max_token_per_leaf_module,
+            max_depth,
+            provider,
+        ]):
             click.echo("No options provided. Use --help for usage information.")
             sys.exit(EXIT_CONFIG_ERROR)
         
         # Validate inputs before saving
         validated_data = {}
         
-        if api_key:
-            validated_data['api_key'] = api_key
-
-        if base_url:
-            validated_data['base_url'] = base_url
-
         if main_model:
             validated_data['main_model'] = main_model
 
         if cluster_model:
             validated_data['cluster_model'] = cluster_model
-
-        if fallback_model:
-            validated_data['fallback_model'] = fallback_model
         
         if max_tokens is not None:
             if max_tokens < 1:
@@ -185,86 +144,47 @@ def config_set(
         if provider is not None:
             validated_data['provider'] = provider
 
-        if aws_region is not None:
-            validated_data['aws_region'] = aws_region
-
-        if api_version is not None:
-            validated_data['api_version'] = api_version
-
-        if azure_deployment is not None:
-            validated_data['azure_deployment'] = azure_deployment
-
         # Create config manager and save
         manager = ConfigManager()
         manager.load()  # Load existing config if present
 
         manager.save(
-            api_key=validated_data.get('api_key'),
-            base_url=validated_data.get('base_url'),
             main_model=validated_data.get('main_model'),
             cluster_model=validated_data.get('cluster_model'),
-            fallback_model=validated_data.get('fallback_model'),
             max_tokens=validated_data.get('max_tokens'),
             max_token_per_module=validated_data.get('max_token_per_module'),
             max_token_per_leaf_module=validated_data.get('max_token_per_leaf_module'),
             max_depth=validated_data.get('max_depth'),
             provider=validated_data.get('provider'),
-            aws_region=validated_data.get('aws_region'),
-            api_version=validated_data.get('api_version'),
-            azure_deployment=validated_data.get('azure_deployment')
         )
         
         # Display success messages
         click.echo()
-        if api_key:
-            if manager.keyring_available:
-                click.secho("✓ API key saved to system keychain", fg="green")
-            else:
-                click.secho(
-                    "⚠️  System keychain unavailable. API key stored in encrypted file.",
-                    fg="yellow"
-                )
-        
-        if base_url:
-            click.secho(f"✓ Base URL: {base_url}", fg="green")
-        
         if main_model:
-            click.secho(f"✓ Main model: {main_model}", fg="green")
+            click.secho(f"OK Main model: {main_model}", fg="green")
         
         if cluster_model:
-            click.secho(f"✓ Cluster model: {cluster_model}", fg="green")
+            click.secho(f"OK Cluster model: {cluster_model}", fg="green")
             
-        if fallback_model:
-            click.secho(f"✓ Fallback model: {fallback_model}", fg="green")
-        
         if max_tokens:
-            click.secho(f"✓ Max tokens: {max_tokens}", fg="green")
+            click.secho(f"OK Max tokens: {max_tokens}", fg="green")
         
         if max_token_per_module:
-            click.secho(f"✓ Max token per module: {max_token_per_module}", fg="green")
+            click.secho(f"OK Max token per module: {max_token_per_module}", fg="green")
         
         if max_token_per_leaf_module:
-            click.secho(f"✓ Max token per leaf module: {max_token_per_leaf_module}", fg="green")
+            click.secho(f"OK Max token per leaf module: {max_token_per_leaf_module}", fg="green")
         
         if max_depth:
-            click.secho(f"✓ Max depth: {max_depth}", fg="green")
+            click.secho(f"OK Max depth: {max_depth}", fg="green")
 
         if provider:
-            click.secho(f"✓ Provider: {provider}", fg="green")
-
-        if aws_region:
-            click.secho(f"✓ AWS Region: {aws_region}", fg="green")
-
-        if api_version:
-            click.secho(f"✓ API Version: {api_version}", fg="green")
-
-        if azure_deployment:
-            click.secho(f"✓ Azure Deployment: {azure_deployment}", fg="green")
+            click.secho(f"OK Provider: {provider}", fg="green")
 
         click.echo("\n" + click.style("Configuration updated successfully.", fg="green", bold=True))
         
     except ConfigurationError as e:
-        click.secho(f"\n✗ Configuration error: {e.message}", fg="red", err=True)
+        click.secho(f"\nERROR Configuration error: {e.message}", fg="red", err=True)
         sys.exit(e.exit_code)
     except Exception as e:
         sys.exit(handle_error(e))
@@ -280,9 +200,7 @@ def config_set(
 def config_show(output_json: bool):
     """
     Display current configuration.
-    
-    API keys are masked for security (showing only first and last 4 characters).
-    
+
     Examples:
     
     \b
@@ -297,24 +215,19 @@ def config_show(output_json: bool):
         manager = ConfigManager()
         
         if not manager.load():
-            click.secho("\n✗ Configuration not found.", fg="red", err=True)
+            click.secho("\nERROR Configuration not found.", fg="red", err=True)
             click.echo("\nPlease run 'codewiki config set --provider ide-bridge'.")
             click.echo("\nFor more help: codewiki config set --help")
             sys.exit(EXIT_CONFIG_ERROR)
         
         config = manager.get_config()
-        api_key = manager.get_api_key()
         
         if output_json:
             # JSON output
             output = {
-                "api_key": mask_api_key(api_key) if api_key else "Not set",
-                "api_key_storage": "keychain" if manager.keyring_available else "encrypted_file",
                 "provider": config.provider if config else "ide-bridge",
-                "base_url": config.base_url if config else "",
                 "main_model": config.main_model if config else "",
                 "cluster_model": config.cluster_model if config else "",
-                "fallback_model": config.fallback_model if config else "glm-4p5",
                 "default_output": config.default_output if config else "docs",
                 "max_tokens": config.max_tokens if config else 32768,
                 "max_token_per_module": config.max_token_per_module if config else 36369,
@@ -328,32 +241,23 @@ def config_show(output_json: bool):
             # Human-readable output
             click.echo()
             click.secho("CodeWiki Configuration", fg="blue", bold=True)
-            click.echo("━" * 40)
+            click.echo("-" * 40)
             click.echo()
             
-            from codewiki.src.be.backend import is_ide_bridge_provider
-            ide_bridge_mode = bool(config) and is_ide_bridge_provider(config.provider)
-
             click.secho("Credentials", fg="cyan", bold=True)
-            if ide_bridge_mode:
-                click.secho(
-                    "  IDE Bridge mode: no API key needed; complete generated task files in your AI IDE",
-                    fg="cyan",
-                )
-            elif api_key:
-                storage = "system keychain" if manager.keyring_available else "encrypted file"
-                click.echo(f"  API Key:          {mask_api_key(api_key)} (in {storage})")
-            else:
-                click.secho("  API Key:          Not set", fg="yellow")
+            click.secho(
+                "  IDE Bridge mode: no API key needed; complete generated task files in your AI IDE",
+                fg="cyan",
+            )
 
             click.echo()
             click.secho("Bridge Settings", fg="cyan", bold=True)
             if config:
                 click.echo(f"  Provider:         {config.provider}")
                 click.echo(f"  Main Model:       {config.main_model or 'Not set'}")
-                if ide_bridge_mode:
-                    click.echo("  Bridge Tasks:     <output>/.codewiki/ide_bridge/tasks")
-                    click.echo("  Bridge Results:   <output>/.codewiki/ide_bridge/results")
+                click.echo(f"  Cluster Model:    {config.cluster_model or 'Not set'}")
+                click.echo("  Bridge Tasks:     <output>/.codewiki/ide_bridge/tasks")
+                click.echo("  Bridge Results:   <output>/.codewiki/ide_bridge/results")
             else:
                 click.secho("  Not configured", fg="yellow")
             
@@ -447,49 +351,49 @@ def config_validate(quick: bool, verbose: bool):
             click.echo(f"      Path: {manager.config_file_path}")
         
         if not manager.load():
-            click.secho("✗ Configuration file not found", fg="red")
+            click.secho("ERROR Configuration file not found", fg="red")
             click.echo()
             click.echo("Error: Configuration is incomplete. Run 'codewiki config set --help' for setup instructions.")
             sys.exit(EXIT_CONFIG_ERROR)
         
         if verbose:
-            click.secho("      ✓ File exists", fg="green")
-            click.secho("      ✓ Valid JSON format", fg="green")
+            click.secho("      OK File exists", fg="green")
+            click.secho("      OK Valid JSON format", fg="green")
         else:
-            click.secho("✓ Configuration file exists", fg="green")
+            click.secho("OK Configuration file exists", fg="green")
         
         config = manager.get_config()
         if not config or config.provider != "ide-bridge":
-            click.secho("✗ Unsupported provider. Use: codewiki config set --provider ide-bridge", fg="red")
+            click.secho("ERROR Unsupported provider. Use: codewiki config set --provider ide-bridge", fg="red")
             sys.exit(EXIT_CONFIG_ERROR)
 
         # Step 2: Check provider
         if verbose:
             click.echo()
             click.echo("[2/3] Checking provider...")
-            click.secho("      ✓ Provider: ide-bridge", fg="green")
+            click.secho("      OK Provider: ide-bridge", fg="green")
         else:
-            click.secho("✓ Provider: ide-bridge", fg="green")
+            click.secho("OK Provider: ide-bridge", fg="green")
 
         # Step 3: Check IDE Bridge mode
         if verbose:
             click.echo()
             click.echo("[3/3] Checking IDE Bridge mode...")
-            click.secho("      ✓ API key not required", fg="green")
-            click.secho("      ✓ Base URL not required", fg="green")
-            click.secho("      ✓ Model configuration not required", fg="green")
-            click.secho("      ✓ Tasks will be written under <output>/.codewiki/ide_bridge/tasks", fg="green")
-            click.secho("      ↳ Complete each task in your AI IDE and save results under the matching results path.", fg="cyan")
+            click.secho("      OK API key not required", fg="green")
+            click.secho("      OK Base URL not required", fg="green")
+            click.secho("      OK Model configuration not required", fg="green")
+            click.secho("      OK Tasks will be written under <output>/.codewiki/ide_bridge/tasks", fg="green")
+            click.secho("      -> Complete each task in your AI IDE and save results under the matching results path.", fg="cyan")
         else:
-            click.secho("✓ IDE Bridge mode ready", fg="green")
+            click.secho("OK IDE Bridge mode ready", fg="green")
         
         # Success
         click.echo()
-        click.secho("✓ Configuration is valid!", fg="green", bold=True)
+        click.secho("OK Configuration is valid!", fg="green", bold=True)
         click.echo()
         
     except ConfigurationError as e:
-        click.secho(f"\n✗ Configuration error: {e.message}", fg="red", err=True)
+        click.secho(f"\nERROR Configuration error: {e.message}", fg="red", err=True)
         sys.exit(e.exit_code)
     except Exception as e:
         sys.exit(handle_error(e, verbose=verbose))
@@ -579,7 +483,7 @@ def config_agent(
         manager = ConfigManager()
         
         if not manager.load():
-            click.secho("\n✗ Configuration not found.", fg="red", err=True)
+            click.secho("\nERROR Configuration not found.", fg="red", err=True)
             click.echo("\nPlease run 'codewiki config set --provider ide-bridge' first.")
             sys.exit(EXIT_CONFIG_ERROR)
         
@@ -590,7 +494,7 @@ def config_agent(
             config.agent_instructions = AgentInstructions()
             manager.save()
             click.echo()
-            click.secho("✓ Agent instructions cleared", fg="green")
+            click.secho("OK Agent instructions cleared", fg="green")
             click.echo()
             return
         
@@ -599,7 +503,7 @@ def config_agent(
             # Display current settings
             click.echo()
             click.secho("Agent Instructions", fg="blue", bold=True)
-            click.echo("━" * 40)
+            click.echo("-" * 40)
             click.echo()
             
             agent = config.agent_instructions
@@ -642,21 +546,21 @@ def config_agent(
         # Display success messages
         click.echo()
         if include:
-            click.secho(f"✓ Include patterns: {parse_patterns(include)}", fg="green")
+            click.secho(f"OK Include patterns: {parse_patterns(include)}", fg="green")
         if exclude:
-            click.secho(f"✓ Exclude patterns: {parse_patterns(exclude)}", fg="green")
+            click.secho(f"OK Exclude patterns: {parse_patterns(exclude)}", fg="green")
         if focus:
-            click.secho(f"✓ Focus modules: {parse_patterns(focus)}", fg="green")
+            click.secho(f"OK Focus modules: {parse_patterns(focus)}", fg="green")
         if doc_type:
-            click.secho(f"✓ Doc type: {doc_type}", fg="green")
+            click.secho(f"OK Doc type: {doc_type}", fg="green")
         if instructions:
-            click.secho(f"✓ Custom instructions set", fg="green")
+            click.secho(f"OK Custom instructions set", fg="green")
         
         click.echo("\n" + click.style("Agent instructions updated successfully.", fg="green", bold=True))
         click.echo()
         
     except ConfigurationError as e:
-        click.secho(f"\n✗ Configuration error: {e.message}", fg="red", err=True)
+        click.secho(f"\nERROR Configuration error: {e.message}", fg="red", err=True)
         sys.exit(e.exit_code)
     except Exception as e:
         sys.exit(handle_error(e))

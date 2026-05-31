@@ -15,7 +15,7 @@ import sys
 
 
 from codewiki.cli.utils.progress import ProgressTracker
-from codewiki.cli.models.job import DocumentationJob, LLMConfig
+from codewiki.cli.models.job import DocumentationJob, BridgeConfig
 from codewiki.cli.utils.errors import APIError
 
 # Import backend modules
@@ -62,10 +62,9 @@ class CLIDocumentationGenerator:
         self.job.repository_path = str(repo_path)
         self.job.repository_name = repo_path.name
         self.job.output_directory = str(output_dir)
-        self.job.llm_config = LLMConfig(
+        self.job.bridge_config = BridgeConfig(
             main_model=config.get('main_model', ''),
             cluster_model=config.get('cluster_model', ''),
-            base_url=config.get('base_url', '')
         )
         
         # Configure backend logging
@@ -133,13 +132,9 @@ class CLIDocumentationGenerator:
             backend_config = BackendConfig.from_cli(
                 repo_path=str(self.repo_path),
                 output_dir=str(self.output_dir),
-                llm_base_url=self.config.get('base_url'),
-                llm_api_key=self.config.get('api_key'),
                 main_model=self.config.get('main_model'),
                 cluster_model=self.config.get('cluster_model'),
-                fallback_model=self.config.get('fallback_model'),
                 provider=self.config.get('provider', 'ide-bridge'),
-                aws_region=self.config.get('aws_region', 'us-east-1'),
                 max_tokens=self.config.get('max_tokens', 32768),
                 max_token_per_module=self.config.get('max_token_per_module', 36369),
                 max_token_per_leaf_module=self.config.get('max_token_per_leaf_module', 16000),

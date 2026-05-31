@@ -29,6 +29,20 @@ Generate documentation following this structure:
    - Process flow diagrams where relevant
 </DOCUMENTATION_STRUCTURE>
 
+<DOCUMENTATION_COVERAGE>
+Cover the following topics when they are relevant to the module. If a topic is
+not applicable, omit it rather than inventing behavior:
+1. Architecture and responsibilities
+2. Core components and their relationships
+3. Data flow and control flow
+4. Configuration and extension points
+5. Monitoring and observability, including metrics, logging, health checks, and diagnostics
+6. Error scenarios and recovery behavior, including retries, validation failures, fallback paths, and shutdown/restart handling
+7. Performance and scalability considerations, including concurrency, buffering, caching, batching, and resource usage
+8. Security and trust boundaries, including secrets, input validation, permissions, and external integrations
+9. Operational lifecycle, including startup, runtime state transitions, maintenance tasks, and cleanup
+</DOCUMENTATION_COVERAGE>
+
 <WORKFLOW>
 1. Analyze the provided code components and module structure, explore the not given dependencies between the components if needed
 2. Create the main `{module_name}.md` file with overview and architecture in working directory
@@ -64,6 +78,20 @@ Generate documentation following the following requirements:
 3. References: Link to other module documentation instead of duplicating information
 </DOCUMENTATION_REQUIREMENTS>
 
+<DOCUMENTATION_COVERAGE>
+Cover the following topics when they are relevant to the module. If a topic is
+not applicable, omit it rather than inventing behavior:
+1. Architecture and responsibilities
+2. Core components and their relationships
+3. Data flow and control flow
+4. Configuration and extension points
+5. Monitoring and observability, including metrics, logging, health checks, and diagnostics
+6. Error scenarios and recovery behavior, including retries, validation failures, fallback paths, and shutdown/restart handling
+7. Performance and scalability considerations, including concurrency, buffering, caching, batching, and resource usage
+8. Security and trust boundaries, including secrets, input validation, permissions, and external integrations
+9. Operational lifecycle, including startup, runtime state transitions, maintenance tasks, and cleanup
+</DOCUMENTATION_COVERAGE>
+
 <WORKFLOW>
 1. Analyze provided code components and module structure
 2. Explore dependencies between components if needed
@@ -97,6 +125,7 @@ The overview should be a brief documentation of the repository, including:
 - The purpose of the repository
 - The end-to-end architecture of the repository visualized by mermaid diagrams
 - The references to the core modules documentation
+- The major runtime flows, operational lifecycle, monitoring and observability surfaces, and error recovery paths when present in the module documentation
 
 Provide `{repo_name}` repo structure and its core modules documentation:
 <REPO_STRUCTURE>
@@ -116,6 +145,7 @@ The overview should be a brief documentation of the module, including:
 - The purpose of the module
 - The architecture of the module visualized by mermaid diagrams
 - The references to the core components documentation
+- The module's runtime behavior, monitoring and observability surfaces, error scenarios and recovery behavior, performance considerations, and operational lifecycle when relevant
 
 Provide repo structure and core components documentation of the `{module_name}` module:
 <REPO_STRUCTURE>

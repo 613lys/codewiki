@@ -293,8 +293,8 @@ codewiki generate --max-tokens 16384 --max-token-per-module 40000 --max-depth 3
 
 ### Configuration Storage
 
-- **API keys**: Securely stored in system keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service). Falls back to `~/.codewiki/credentials.json` in headless/container environments. Set `CODEWIKI_NO_KEYRING=1` to force file-based storage.
 - **Settings & Agent Instructions**: `~/.codewiki/config.json`
+- **Credentials**: Not used. This build only supports IDE Bridge task files.
 
 ---
 

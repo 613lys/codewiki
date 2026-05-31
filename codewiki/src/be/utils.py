@@ -5,7 +5,6 @@ import threading
 from pathlib import Path
 from typing import List, Tuple
 import logging
-import tiktoken
 import traceback
 
 
@@ -46,14 +45,29 @@ def is_complex_module(components: dict[str, any], core_component_ids: list[str])
 # ---------------------- Token Counting ---------------------
 # ------------------------------------------------------------
 
-enc = tiktoken.encoding_for_model("gpt-4")
-
 def count_tokens(text: str) -> int:
     """
-    Count the number of tokens in a text.
+    Estimate the number of tokens in a text without external tokenizer data.
+
+    CodeWiki's IDE Bridge mode only needs token counts for local chunking and
+    clustering thresholds. Using a conservative local estimate avoids importing
+    tokenizer packages that may download model data at runtime.
     """
-    length = len(enc.encode(text))
-    # logger.debug(f"Number of tokens: {length}")
+    if not text:
+        return 0
+
+    # Roughly match common BPE behavior for mixed source code and prose:
+    # ASCII-heavy text averages about 4 chars/token, while CJK characters are
+    # closer to one token each. Keep the larger estimate so chunking remains
+    # conservative without any network dependency.
+    cjk_chars = len(re.findall(r"[\u3400-\u9fff\uf900-\ufaff]", text))
+    ascii_chars = len(text) - cjk_chars
+    estimated = (ascii_chars + 3) // 4 + cjk_chars
+    # Very punctuation-heavy code can produce more tokens than char/4; this
+    # lexical pass catches identifiers, numbers, and standalone symbols.
+    lexical_units = len(re.findall(r"\w+|[^\w\s]", text, flags=re.UNICODE))
+    length = max(estimated, lexical_units)
+    # logger.debug(f"Estimated tokens: {length}")
     return length
 
 

@@ -37,11 +37,10 @@ class JobStatistics:
 
 
 @dataclass
-class LLMConfig:
-    """LLM configuration for a job."""
+class BridgeConfig:
+    """IDE Bridge metadata for a job."""
     main_model: str
     cluster_model: str
-    base_url: str
 
 
 @dataclass
@@ -63,7 +62,7 @@ class DocumentationJob:
         files_generated: List of generated files
         module_count: Number of modules documented
         generation_options: Generation options used
-        llm_config: LLM configuration used
+        bridge_config: IDE Bridge metadata used
         statistics: Job statistics
     """
     job_id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -79,7 +78,7 @@ class DocumentationJob:
     files_generated: List[str] = field(default_factory=list)
     module_count: int = 0
     generation_options: GenerationOptions = field(default_factory=GenerationOptions)
-    llm_config: Optional[LLMConfig] = None
+    bridge_config: Optional[BridgeConfig] = None
     statistics: JobStatistics = field(default_factory=JobStatistics)
     
     def start(self):
@@ -114,7 +113,7 @@ class DocumentationJob:
             "files_generated": self.files_generated,
             "module_count": self.module_count,
             "generation_options": asdict(self.generation_options),
-            "llm_config": asdict(self.llm_config) if self.llm_config else None,
+            "bridge_config": asdict(self.bridge_config) if self.bridge_config else None,
             "statistics": asdict(self.statistics),
         }
         return data
@@ -146,11 +145,16 @@ class DocumentationJob:
             opts = data['generation_options']
             job.generation_options = GenerationOptions(**opts)
         
-        if 'llm_config' in data and data['llm_config']:
-            job.llm_config = LLMConfig(**data['llm_config'])
+        if 'bridge_config' in data and data['bridge_config']:
+            job.bridge_config = BridgeConfig(**data['bridge_config'])
+        elif 'llm_config' in data and data['llm_config']:
+            legacy = data['llm_config']
+            job.bridge_config = BridgeConfig(
+                main_model=legacy.get('main_model', ''),
+                cluster_model=legacy.get('cluster_model', ''),
+            )
         
         if 'statistics' in data:
             job.statistics = JobStatistics(**data['statistics'])
         
         return job
-

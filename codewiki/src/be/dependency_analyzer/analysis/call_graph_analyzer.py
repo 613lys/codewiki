@@ -88,11 +88,11 @@ class CallGraphAnalyzer:
                 files_analyzed += 1
             except Exception as e:
                 files_failed += 1
-                logger.warning(f"  ⚠️  [{idx}/{len(code_files)}] Failed to analyze {file_path}: {str(e)[:100]}")
+                logger.warning(f"  WARN [{idx}/{len(code_files)}] Failed to analyze {file_path}: {str(e)[:100]}")
         
         elapsed_time = time.time() - start_time
         logger.info(
-            f"✓ Analysis complete: {files_analyzed}/{len(code_files)} files analyzed, "
+            f"OK Analysis complete: {files_analyzed}/{len(code_files)} files analyzed, "
             f"{files_failed} failed, {len(self.functions)} functions, {len(self.call_relationships)} relationships ({elapsed_time:.1f}s)"
         )
 
@@ -616,4 +616,3 @@ class CallGraphAnalyzer:
             for rel in self.call_relationships
             if rel.caller in selected_func_ids and rel.callee in selected_func_ids
         ]
-

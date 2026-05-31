@@ -67,7 +67,7 @@ def display_post_generation_instructions(
         statistics: Generation statistics
     """
     click.echo()
-    click.secho("✓ Documentation generated successfully!", fg="green", bold=True)
+    click.secho("OK Documentation generated successfully!", fg="green", bold=True)
     click.echo()
     
     # Output directory
@@ -138,7 +138,7 @@ def display_post_generation_instructions(
         
         click.echo("4. Enable GitHub Pages:")
     
-    click.echo("   - Go to repository Settings → Pages")
+    click.echo("   - Go to repository Settings > Pages")
     click.echo("   - Source: Deploy from a branch")
     click.echo("   - Branch: main, folder: /docs")
     click.echo()
@@ -165,15 +165,14 @@ def display_generation_summary(
     """
     if success:
         click.echo()
-        click.secho("✓ Generation completed successfully!", fg="green", bold=True)
+        click.secho("OK Generation completed successfully!", fg="green", bold=True)
         if output_dir:
             click.echo(f"\nDocumentation saved to: {output_dir}")
         click.echo()
     else:
         click.echo()
-        click.secho("✗ Generation failed", fg="red", bold=True)
+        click.secho("ERROR Generation failed", fg="red", bold=True)
         if error_message:
             click.echo()
             click.echo(error_message)
         click.echo()
-

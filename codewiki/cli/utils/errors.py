@@ -4,9 +4,9 @@ Error handling utilities and exit codes for CLI.
 Exit Codes:
   0: Success
   1: General error
-  2: Configuration error (missing/invalid credentials)
+  2: Configuration error
   3: Repository error (not a git repo, no code files)
-  4: LLM API error (including rate limits)
+  4: LLM task error
   5: File system error (permissions, disk space)
 """
 
@@ -48,7 +48,7 @@ class RepositoryError(CodeWikiError):
 
 
 class APIError(CodeWikiError):
-    """LLM API-related errors."""
+    """LLM task-related errors."""
     
     def __init__(self, message: str):
         super().__init__(message, EXIT_API_ERROR)
@@ -73,10 +73,10 @@ def handle_error(error: Exception, verbose: bool = False) -> int:
         Exit code for the error
     """
     if isinstance(error, CodeWikiError):
-        click.secho(f"\n✗ Error: {error.message}", fg="red", err=True)
+        click.secho(f"\nERROR {error.message}", fg="red", err=True)
         return error.exit_code
     else:
-        click.secho(f"\n✗ Unexpected error: {error}", fg="red", err=True)
+        click.secho(f"\nERROR Unexpected error: {error}", fg="red", err=True)
         if verbose:
             import traceback
             click.echo(traceback.format_exc(), err=True)
@@ -92,22 +92,21 @@ def error_with_suggestion(message: str, suggestion: str, exit_code: int = EXIT_G
         suggestion: Suggested action to resolve the error
         exit_code: Exit code to use
     """
-    click.secho(f"\n✗ Error: {message}", fg="red", err=True)
+    click.secho(f"\nERROR {message}", fg="red", err=True)
     click.echo(f"\n{suggestion}", err=True)
     sys.exit(exit_code)
 
 
 def warning(message: str):
     """Display a warning message."""
-    click.secho(f"⚠️  {message}", fg="yellow")
+    click.secho(f"WARN {message}", fg="yellow")
 
 
 def success(message: str):
     """Display a success message."""
-    click.secho(f"✓ {message}", fg="green")
+    click.secho(f"OK {message}", fg="green")
 
 
 def info(message: str):
     """Display an info message."""
     click.echo(message)
-

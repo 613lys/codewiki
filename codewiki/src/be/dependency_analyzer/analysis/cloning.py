@@ -211,10 +211,10 @@ def cleanup_repository_safe(repo_dir: str) -> bool:
                 shutil.rmtree(repo_dir)
             return True
         except Exception as retry_e:
-            print(f"⚠️ Warning: Failed to cleanup {repo_dir} after retry: {str(retry_e)}")
+            print(f"WARN Failed to cleanup {repo_dir} after retry: {str(retry_e)}")
             return False
     except Exception as e:
-        print(f"⚠️ Warning: Failed to cleanup {repo_dir}: {str(e)}")
+        print(f"WARN Failed to cleanup {repo_dir}: {str(e)}")
         return False
 
 

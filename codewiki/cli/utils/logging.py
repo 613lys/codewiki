@@ -33,15 +33,15 @@ class CLILogger:
     
     def success(self, message: str):
         """Log success message in green."""
-        click.secho(f"✓ {message}", fg="green")
+        click.secho(f"OK {message}", fg="green")
     
     def warning(self, message: str):
         """Log warning message in yellow."""
-        click.secho(f"⚠️  {message}", fg="yellow")
+        click.secho(f"WARN {message}", fg="yellow")
     
     def error(self, message: str):
         """Log error message in red."""
-        click.secho(f"✗ {message}", fg="red", err=True)
+        click.secho(f"ERROR {message}", fg="red", err=True)
     
     def step(self, message: str, step: Optional[int] = None, total: Optional[int] = None):
         """
@@ -55,7 +55,7 @@ class CLILogger:
         if step is not None and total is not None:
             prefix = f"[{step}/{total}]"
         else:
-            prefix = "→"
+            prefix = ">"
         
         click.secho(f"{prefix} {message}", fg="blue", bold=True)
     
@@ -82,4 +82,3 @@ def create_logger(verbose: bool = False) -> CLILogger:
         Configured CLILogger instance
     """
     return CLILogger(verbose=verbose)
-
