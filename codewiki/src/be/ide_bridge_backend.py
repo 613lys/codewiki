@@ -158,7 +158,38 @@ class IDEBridgeBackend(LLMBackend):
         )
         result_path = self._results_dir / f"{task_id}.txt"
         if result_path.exists():
-            return self._parse_submodule_result(result_path.read_text(encoding="utf-8"))
+            try:
+                return self._parse_submodule_result(result_path.read_text(encoding="utf-8"))
+            except Exception as error:
+                repair_task_path = self._tasks_dir / f"{task_id}_repair.md"
+                repair_metadata = {
+                    "task_id": f"{task_id}_repair",
+                    "kind": "submodule_planning_repair",
+                    "module_name": module_name,
+                    "module_path": module_path,
+                    "core_component_ids": core_component_ids,
+                    "result_path": str(result_path),
+                    "invalid_result_path": str(result_path),
+                    "parse_error": str(error),
+                }
+                repair_instructions = self._format_submodule_repair_task(
+                    module_name=module_name,
+                    result_path=result_path,
+                    parse_error=str(error),
+                    prompt=prompt,
+                )
+                self._write_task(repair_task_path, repair_instructions, repair_metadata)
+                self._add_pending(
+                    "submodule_planning_repair",
+                    repair_task_path,
+                    result_path,
+                    extra={
+                        "parse_error": str(error),
+                        "invalid_result_path": str(result_path),
+                    },
+                )
+                self.raise_if_pending()
+                return None
 
         task_path = self._tasks_dir / f"{task_id}.md"
         metadata = {
@@ -179,6 +210,50 @@ class IDEBridgeBackend(LLMBackend):
         self._add_pending("submodule_planning", task_path, result_path)
         self.raise_if_pending()
         return None
+
+    @staticmethod
+    def _format_submodule_repair_task(
+        *,
+        module_name: str,
+        result_path: Path,
+        parse_error: str,
+        prompt: str,
+    ) -> str:
+        return (
+            "# CodeWiki Task\n\n"
+            "Repair the existing submodule planning result.\n\n"
+            "## Parse Error\n\n"
+            f"`{parse_error}`\n\n"
+            "## Required Action\n\n"
+            f"- Overwrite `{result_path}` with a valid response.\n"
+            "- The response must contain exactly one `<SUB_MODULES>...</SUB_MODULES>` block.\n"
+            "- The content inside `<SUB_MODULES>` must be a dictionary/object, not an array/list.\n"
+            "- Each top-level key must be a submodule name.\n"
+            "- Each value must contain `path` and `components`.\n"
+            "- Every component id must be copied exactly from the original task.\n"
+            "- If no useful split exists, write an empty object.\n\n"
+            "## Valid Empty Response\n\n"
+            "```text\n"
+            "<SUB_MODULES>\n"
+            "{}\n"
+            "</SUB_MODULES>\n"
+            "```\n\n"
+            "## Valid Split Response Shape\n\n"
+            "```text\n"
+            "<SUB_MODULES>\n"
+            "{\n"
+            f"  \"{module_name} child module\": {{\n"
+            "    \"path\": \"path/to/module\",\n"
+            "    \"components\": [\n"
+            "      \"exact/component/id::Name\"\n"
+            "    ]\n"
+            "  }\n"
+            "}\n"
+            "</SUB_MODULES>\n"
+            "```\n\n"
+            "## Original Planning Prompt\n\n"
+            f"{prompt}\n"
+        )
 
     def _format_module_task(
         self,
@@ -358,13 +433,21 @@ class IDEBridgeBackend(LLMBackend):
         if not metadata_path.exists():
             metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
-    def _add_pending(self, kind: str, task_path: Path, result_path: Path) -> None:
+    def _add_pending(
+        self,
+        kind: str,
+        task_path: Path,
+        result_path: Path,
+        extra: Dict[str, Any] | None = None,
+    ) -> None:
         task = {
             "kind": kind,
             "task_path": str(task_path),
             "result_path": str(result_path),
             **self._task_guidance(kind),
         }
+        if extra:
+            task.update(extra)
         if task not in self.pending_tasks:
             self.pending_tasks.append(task)
         self._write_pending_manifest()
@@ -447,6 +530,17 @@ class IDEBridgeBackend(LLMBackend):
                 ),
                 "output_contract": (
                     "Write exactly one <SUB_MODULES>...</SUB_MODULES> block to result_path."
+                ),
+            }
+        if kind == "submodule_planning_repair":
+            return {
+                "expected_action": (
+                    "Repair the malformed submodule planning result by reading task_path and "
+                    "overwriting result_path with a valid <SUB_MODULES> dictionary response."
+                ),
+                "output_contract": (
+                    "Write exactly one <SUB_MODULES>...</SUB_MODULES> block. The wrapped "
+                    "content must be a dictionary/object, not a list/array."
                 ),
             }
         return {
