@@ -60,7 +60,7 @@ class IDEBridgeBackend(LLMBackend):
             "result_path": str(result_path),
         }
         instructions = (
-            "Complete this CodeWiki LLM task in your AI IDE.\n\n"
+            "Complete this CodeWiki LLM task.\n\n"
             f"Write the exact model response to:\n\n`{result_path}`\n\n"
             "Keep any requested XML-style wrapper tags from the prompt. For "
             "clustering tasks, the response must include the "
@@ -162,14 +162,6 @@ class IDEBridgeBackend(LLMBackend):
             for component_id in sorted(ids):
                 source_lines.append(f"   - `{component_id}`")
 
-        custom_instructions = self._config.get_prompt_addition().strip()
-        custom_section = ""
-        if custom_instructions:
-            custom_section = (
-                "\n## Additional Instructions\n\n"
-                f"{custom_instructions}\n"
-            )
-
         missing_section = ""
         if missing_components:
             missing_section = (
@@ -178,7 +170,6 @@ class IDEBridgeBackend(LLMBackend):
                 + "\n"
             )
 
-        module_tree_path = Path(working_dir) / MODULE_TREE_FILENAME
         formatted_module_tree = json.dumps(module_tree, indent=2)
         system_prompt = self._format_original_system_prompt(
             module_name=module_name,
@@ -194,58 +185,16 @@ class IDEBridgeBackend(LLMBackend):
         )
 
         return (
-            "# CodeWiki IDE Bridge Task\n\n"
-            "## Goal\n\n"
-            f"Read the source files listed below and generate architecture documentation "
-            f"for module `{module_name}`.\n\n"
+            "# CodeWiki Task\n\n"
+            "Complete the documentation task below.\n\n"
             "## Output Contract\n\n"
             f"- Write only the final markdown document to `{result_path}`.\n"
-            f"- CodeWiki will copy that result into `{docs_path}` on the next run.\n"
             "- Do not include chat prefaces, explanations about this task, or a code fence around the whole file.\n"
-            "- Include Mermaid diagrams where they clarify architecture, dependencies, data flow, or user flow.\n"
-            "- Link to related module docs when they exist instead of duplicating their content.\n"
-            "- Keep the document useful to a developer maintaining this repository.\n\n"
-            "## Required Output Format\n\n"
-            f"# {module_name}\n\n"
-            "## Purpose\n\n"
-            "Explain what this module/system does and why it exists.\n\n"
-            "## Architecture\n\n"
-            "Describe the main architectural structure. Include a Mermaid diagram if useful.\n\n"
-            "## Components\n\n"
-            "List the important components and explain each responsibility.\n\n"
-            "## Runtime Flows\n\n"
-            "Describe key flows such as request handling, authentication, report generation, export, or data persistence. Include sequence/data-flow diagrams where useful.\n\n"
-            "## Data Model\n\n"
-            "Summarize important entities, DTOs, persistence tables, and relationships if present.\n\n"
-            "## Integration Points\n\n"
-            "Describe frontend/backend/API/database/test integrations if present.\n\n"
-            "## Maintenance Notes\n\n"
-            "Call out extension points, operational assumptions, and risks a maintainer should know.\n\n"
-            "## Original CodeWiki System Prompt\n\n"
-            "The original CodeWiki documentation prompt is preserved below. "
-            "In IDE Bridge mode, runtime tools such as `str_replace_editor`, "
-            "`read_code_components`, and `generate_sub_module_documentation` are not available; "
-            "use your IDE file access instead and write the final markdown to the result path.\n\n"
-            "```text\n"
+            f"- The final document will be copied to `{docs_path}` on the next run.\n\n"
+            "## System Prompt\n\n"
             f"{system_prompt}\n"
-            "```\n\n"
-            "## Original CodeWiki User Prompt, IDE Bridge Input\n\n"
-            "This preserves the original module-tree and cross-reference instructions. "
-            "`CORE_COMPONENT_CODES` is intentionally represented as file/component references "
-            "so the AI IDE can read source files directly from the workspace.\n\n"
-            "```text\n"
+            "\n## User Prompt\n\n"
             f"{user_prompt}\n"
-            "```\n\n"
-            "## Repository Context\n\n"
-            f"- Repository root: `{repo_root}`\n"
-            f"- Documentation output directory: `{Path(working_dir).resolve()}`\n"
-            f"- Module path: `{module_path or ['<repo>']}`\n"
-            f"- Module tree file: `{module_tree_path}`\n"
-            f"- Module tree currently has {len(module_tree)} top-level entries.\n\n"
-            "## Source Files To Read\n\n"
-            + ("\n".join(source_lines) if source_lines else "- No source files were provided by analysis.")
-            + "\n"
-            + custom_section
             + missing_section
         )
 
@@ -280,7 +229,7 @@ class IDEBridgeBackend(LLMBackend):
             "documentation files are saved in the same folder not structured as module "
             "tree. e.g. [alt text]([ref_module_name].md)\n\n"
             "<CORE_COMPONENT_CODES>\n"
-            "Source code is not embedded in IDE Bridge mode. Read these files from the workspace:\n\n"
+            "Read these source files from the repository workspace:\n\n"
             f"{source_references}\n"
             "</CORE_COMPONENT_CODES>"
         )
@@ -308,7 +257,7 @@ class IDEBridgeBackend(LLMBackend):
 
         if not task_path.exists():
             body = instructions if instructions.lstrip().startswith("#") else (
-                "# CodeWiki IDE Bridge Task\n\n"
+                "# CodeWiki Task\n\n"
                 f"{instructions}"
             )
             task_path.write_text(
