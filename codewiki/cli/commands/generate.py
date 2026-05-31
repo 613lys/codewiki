@@ -2,6 +2,7 @@
 Generate command for documentation generation.
 """
 
+import json
 import sys
 import logging
 import traceback
@@ -203,6 +204,46 @@ def _invalidate_affected_modules(
         logger.debug(f"Invalidated {len(modules_to_invalidate)} modules for regeneration.")
 
 
+def _agent_manifest_path(output_dir: Path) -> Path:
+    return output_dir / ".codewiki" / "ide_bridge" / "pending_tasks.json"
+
+
+def _read_agent_manifest(output_dir: Path) -> dict:
+    manifest_path = _agent_manifest_path(output_dir)
+    if not manifest_path.exists():
+        return {
+            "status": "error",
+            "message": "pending_tasks.json was not found",
+            "pending_manifest_path": str(manifest_path),
+        }
+    try:
+        return json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {
+            "status": "error",
+            "message": f"pending_tasks.json is invalid JSON: {exc}",
+            "pending_manifest_path": str(manifest_path),
+        }
+
+
+def _write_agent_status(output_dir: Path, status: str, **extra) -> dict:
+    bridge_dir = output_dir / ".codewiki" / "ide_bridge"
+    bridge_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = bridge_dir / "pending_tasks.json"
+    payload = {
+        "status": status,
+        "output_dir": str(output_dir),
+        "pending_manifest_path": str(manifest_path),
+        **extra,
+    }
+    manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return payload
+
+
+def _emit_agent_json(payload: dict) -> None:
+    click.echo(json.dumps(payload, indent=2))
+
+
 @click.command(name="generate")
 @click.option(
     "--output",
@@ -295,6 +336,11 @@ def _invalidate_affected_modules(
     is_flag=True,
     help="Incremental update: only regenerate modules affected by changes since last generation",
 )
+@click.option(
+    "--agent-json",
+    is_flag=True,
+    help="Emit machine-readable pending/complete status for AI IDE batch loops",
+)
 @click.pass_context
 def generate_command(
     ctx,
@@ -312,7 +358,8 @@ def generate_command(
     max_token_per_module: Optional[int],
     max_token_per_leaf_module: Optional[int],
     max_depth: Optional[int],
-    update: bool = False
+    update: bool = False,
+    agent_json: bool = False,
 ):
     """
     Generate comprehensive documentation for a code repository.
@@ -360,6 +407,7 @@ def generate_command(
     """
     logger = create_logger(verbose=verbose)
     start_time = time.time()
+    output_dir = Path(output).expanduser().resolve()
     
     # Suppress httpx INFO logs
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -411,7 +459,6 @@ def generate_command(
                 logger.warning("Not a git repository. Git features unavailable.")
         
         # Validate output directory
-        output_dir = Path(output).expanduser().resolve()
         check_writable_output(output_dir.parent)
         
         logger.success(f"Output directory: {output_dir}")
@@ -583,6 +630,17 @@ def generate_command(
                 'total_tokens_used': job.statistics.total_tokens_used,
             }
         )
+
+        if agent_json:
+            payload = _write_agent_status(
+                output_dir,
+                "complete",
+                files_generated=job.files_generated,
+                module_count=job.module_count,
+                total_files_analyzed=job.statistics.total_files_analyzed,
+                generation_time_seconds=generation_time,
+            )
+            _emit_agent_json(payload)
         
     except ConfigurationError as e:
         logger.error(e.message)
@@ -595,6 +653,8 @@ def generate_command(
     except APIError as e:
         logger.error(e.message)
         logger.error(f"Traceback: {traceback.format_exc()}")
+        if agent_json and "IDE Bridge created" in e.message:
+            _emit_agent_json(_read_agent_manifest(output_dir))
         sys.exit(e.exit_code)
     except KeyboardInterrupt:
         click.echo("\n\nInterrupted by user")

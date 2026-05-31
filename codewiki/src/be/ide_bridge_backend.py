@@ -366,6 +366,23 @@ class IDEBridgeBackend(LLMBackend):
         }
         if task not in self.pending_tasks:
             self.pending_tasks.append(task)
+        self._write_pending_manifest()
+
+    def _write_pending_manifest(self) -> None:
+        self._bridge_dir.mkdir(parents=True, exist_ok=True)
+        manifest_path = self._bridge_dir / "pending_tasks.json"
+        manifest = {
+            "status": "pending",
+            "task_count": len(self.pending_tasks),
+            "tasks": self.pending_tasks,
+            "instructions": [
+                "Read each task_path.",
+                "Complete the task by reading referenced repository files.",
+                "Write the exact response to result_path.",
+                "Rerun the same codewiki generate command.",
+            ],
+        }
+        manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
     def has_pending_tasks(self) -> bool:
         return bool(self.pending_tasks)
@@ -376,6 +393,7 @@ class IDEBridgeBackend(LLMBackend):
 
         lines = [
             f"IDE Bridge created {len(self.pending_tasks)} pending task(s).",
+            f"Pending manifest: {self._bridge_dir / 'pending_tasks.json'}",
             "",
             "Complete them in your AI IDE, write each response to its result path,",
             "then rerun `codewiki generate`.",
