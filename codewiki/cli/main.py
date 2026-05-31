@@ -33,10 +33,12 @@ def version():
 # Import commands
 from codewiki.cli.commands.config import config_group
 from codewiki.cli.commands.generate import generate_command
+from codewiki.cli.commands.html import html_command
 
 # Register command groups
 cli.add_command(config_group)
 cli.add_command(generate_command, name="generate")
+cli.add_command(html_command, name="html")
 
 
 @cli.command(name="mcp")
@@ -69,10 +71,9 @@ def main():
         click.echo("\n\nInterrupted by user", err=True)
         sys.exit(130)
     except Exception as e:
-        click.secho(f"\n✗ Unexpected error: {e}", fg="red", err=True)
+        click.secho(f"\nERROR Unexpected error: {e}", fg="red", err=True)
         sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
-
