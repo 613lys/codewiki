@@ -16,7 +16,7 @@ from codewiki.src.be.prompt_template import (
     MODULE_OVERVIEW_PROMPT,
 )
 from codewiki.src.be.cluster_modules import cluster_modules
-from codewiki.src.be.utils import is_complex_module
+from codewiki.src.be.utils import count_tokens, is_complex_module
 from codewiki.src.config import (
     Config,
     FIRST_MODULE_TREE_FILENAME,
@@ -130,7 +130,16 @@ class DocumentationGenerator:
             return False
         if len(module_path) >= self.config.max_depth:
             return False
-        return is_complex_module(components, module_info.get("components", []))
+        core_component_ids = module_info.get("components", [])
+        source_tokens = sum(
+            count_tokens(components[component_id].source_code)
+            for component_id in core_component_ids
+            if component_id in components
+        )
+        return (
+            source_tokens >= self.config.max_token_per_leaf_module
+            and is_complex_module(components, core_component_ids)
+        )
 
     @staticmethod
     def _validate_submodule_plan(
@@ -368,7 +377,16 @@ class DocumentationGenerator:
             logger.info(f"Processing whole repo because repo can fit in the context window")
             repo_name = os.path.basename(os.path.normpath(self.config.repo_path))
 
-            if self.config.max_depth > 0 and is_complex_module(components, leaf_nodes):
+            source_tokens = sum(
+                count_tokens(components[component_id].source_code)
+                for component_id in leaf_nodes
+                if component_id in components
+            )
+            if (
+                self.config.max_depth > 0
+                and source_tokens >= self.config.max_token_per_leaf_module
+                and is_complex_module(components, leaf_nodes)
+            ):
                 planned_tree = await self._plan_and_apply_submodules(
                     module_name=repo_name,
                     components=components,
