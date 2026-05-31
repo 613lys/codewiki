@@ -67,6 +67,67 @@ codewiki generate --github-pages --create-branch
 
 **That's it!** Your documentation will be generated in `./docs/` with comprehensive repository-level analysis.
 
+### 4. Run with an AI IDE Agent
+
+If you are using Windsurf or another AI IDE, run CodeWiki in agent batch mode. CodeWiki will create task files under `docs_windsurf/.codewiki/ide_bridge/`, wait for the AI IDE to write result files, then continue when you rerun the same command.
+
+For a Java project, a good starting command is:
+
+```powershell
+codewiki generate `
+  --output docs_windsurf `
+  --include "*.java,*.xml,*.yml,*.yaml,*.properties,*.sql,*.html,*.css,*.ts" `
+  --exclude "target/**,build/**,.gradle/**,.mvn/**,node_modules/**,dist/**,out/**" `
+  --max-depth 2 `
+  --max-token-per-module 25000 `
+  --max-token-per-leaf-module 12000 `
+  --doc-type architecture `
+  --agent-json `
+  --verbose
+```
+
+Use this as the startup prompt for the AI IDE agent:
+
+```text
+You are running CodeWiki in agent batch mode.
+
+Run the provided `codewiki generate` command.
+
+After each run, inspect:
+
+<output>/.codewiki/ide_bridge/pending_tasks.json
+
+Follow the JSON protocol exactly:
+
+1. If `status` is `complete`, stop. Do not generate more task results.
+
+2. If `status` is `pending`, read `agent_prompt`, `rerun_command`, and `tasks`.
+
+3. If `selection_required` is true, ask the user which task indexes to complete before writing any result files. Accept:
+   - `all`
+   - a single number, e.g. `4`
+   - a range, e.g. `1-3`
+   - a comma-separated selection, e.g. `1,3,5-7`
+
+4. Complete only the selected task indexes. If `selection_required` is false, complete task `1`.
+
+5. For each selected task:
+   - Read `task_path`.
+   - Read referenced repository source files directly from the workspace.
+   - Follow the task file's prompt and output contract.
+   - Write the exact required response to `result_path`.
+
+6. Rerun `rerun_command`.
+
+Repeat until `pending_tasks.json` reports `status: complete`.
+
+Important:
+- Do not treat the task file as the only source of truth; read referenced source files directly.
+- Do not write chat explanations into result files.
+- Preserve required wrapper tags such as `<GROUPED_COMPONENTS>`, `<SUB_MODULES>`, or `<OVERVIEW>` when requested.
+- For markdown documentation tasks, write only the final markdown document.
+```
+
 ### Usage Example
 
 ![CLI Usage Example](https://github.com/FSoft-AI4Code/CodeWiki/releases/download/assets/cli-usage-example.gif)
@@ -96,13 +157,8 @@ CodeWiki is an open-source framework for **automated repository-level documentat
 ### Configuration Management
 
 ```bash
-# Set up your API configuration
-codewiki config set \
-  --api-key <your-api-key> \
-  --base-url <provider-url> \
-  --main-model <model-name> \
-  --cluster-model <model-name> \
-  --fallback-model <model-name>
+# Use IDE Bridge mode
+codewiki config set --provider ide-bridge
 
 # Configure max token settings
 codewiki config set --max-tokens 32768 --max-token-per-module 36369 --max-token-per-leaf-module 16000
