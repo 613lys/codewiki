@@ -65,6 +65,22 @@ class LLMBackend(abc.ABC):
     ) -> Dict[str, Any]:
         """Run the per-module agent loop.  Returns the updated module_tree dict."""
 
+    async def plan_submodules(
+        self,
+        module_name: str,
+        components: Dict[str, "Node"],
+        core_component_ids: List[str],
+        module_path: List[str],
+        working_dir: str,
+        module_tree: Dict[str, Any],
+    ) -> Dict[str, Any] | None:
+        """Optionally plan child modules.
+
+        Backends that do not support explicit planning return ``None`` so the
+        original agent/tool workflow remains unchanged.
+        """
+        return None
+
 
 def get_backend(config) -> "LLMBackend":
     """Return the backend instance matching ``config.provider``."""

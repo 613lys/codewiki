@@ -21,6 +21,7 @@ from typing import Any, Dict, List
 from codewiki.src.be.backend import IDEBridgePendingTask, LLMBackend
 from codewiki.src.be.dependency_analyzer.models.core import Node
 from codewiki.src.be.prompt_template import (
+    SUBMODULE_PLANNING_PROMPT,
     format_leaf_system_prompt,
     format_system_prompt,
 )
@@ -131,6 +132,54 @@ class IDEBridgeBackend(LLMBackend):
         self._add_pending("module_documentation", task_path, result_path)
         return module_tree
 
+    async def plan_submodules(
+        self,
+        module_name: str,
+        components: Dict[str, Node],
+        core_component_ids: List[str],
+        module_path: List[str],
+        working_dir: str,
+        module_tree: Dict[str, Any],
+    ) -> Dict[str, Any] | None:
+        core_component_references = self._format_component_references(
+            components,
+            core_component_ids,
+        )
+        prompt = SUBMODULE_PLANNING_PROMPT.format(
+            module_name=module_name,
+            module_tree=json.dumps(module_tree, indent=2),
+            core_component_references=core_component_references,
+        )
+        task_id = self._task_id(
+            "submodule_planning",
+            module_name,
+            "/".join(module_path),
+            prompt,
+        )
+        result_path = self._results_dir / f"{task_id}.txt"
+        if result_path.exists():
+            return self._parse_submodule_result(result_path.read_text(encoding="utf-8"))
+
+        task_path = self._tasks_dir / f"{task_id}.md"
+        metadata = {
+            "task_id": task_id,
+            "kind": "submodule_planning",
+            "module_name": module_name,
+            "module_path": module_path,
+            "core_component_ids": core_component_ids,
+            "result_path": str(result_path),
+        }
+        instructions = (
+            "Complete this CodeWiki planning task.\n\n"
+            f"Write the exact response to:\n\n`{result_path}`\n\n"
+            "The response must include exactly one "
+            "`<SUB_MODULES>...</SUB_MODULES>` block."
+        )
+        self._write_task(task_path, instructions, metadata, prompt)
+        self._add_pending("submodule_planning", task_path, result_path)
+        self.raise_if_pending()
+        return None
+
     def _format_module_task(
         self,
         *,
@@ -144,23 +193,13 @@ class IDEBridgeBackend(LLMBackend):
         docs_path: Path,
     ) -> str:
         """Create an AI-IDE-oriented task without embedding full source files."""
-        source_files: dict[str, list[str]] = {}
-        missing_components: list[str] = []
         repo_root = Path(self._config.repo_path).resolve()
 
-        for component_id in core_component_ids:
-            component = components.get(component_id)
-            if component is None:
-                missing_components.append(component_id)
-                continue
-            relative_path = self._component_relative_path(component, repo_root)
-            source_files.setdefault(relative_path, []).append(component_id)
-
-        source_lines: list[str] = []
-        for index, (relative_path, ids) in enumerate(sorted(source_files.items()), 1):
-            source_lines.append(f"{index}. `{relative_path}`")
-            for component_id in sorted(ids):
-                source_lines.append(f"   - `{component_id}`")
+        source_refs, missing_components = self._format_component_references_with_missing(
+            components,
+            core_component_ids,
+            repo_root,
+        )
 
         missing_section = ""
         if missing_components:
@@ -179,9 +218,7 @@ class IDEBridgeBackend(LLMBackend):
         user_prompt = self._format_ide_user_prompt(
             module_name=module_name,
             formatted_module_tree=formatted_module_tree,
-            source_references="\n".join(source_lines)
-            if source_lines
-            else "No source files were provided by analysis.",
+            source_references=source_refs,
         )
 
         return (
@@ -209,6 +246,59 @@ class IDEBridgeBackend(LLMBackend):
         if is_complex_module(components, core_component_ids):
             return format_system_prompt(module_name, custom_instructions)
         return format_leaf_system_prompt(module_name, custom_instructions)
+
+    def _format_component_references(
+        self,
+        components: Dict[str, Node],
+        core_component_ids: List[str],
+    ) -> str:
+        refs, _ = self._format_component_references_with_missing(
+            components,
+            core_component_ids,
+            Path(self._config.repo_path).resolve(),
+        )
+        return refs
+
+    def _format_component_references_with_missing(
+        self,
+        components: Dict[str, Node],
+        core_component_ids: List[str],
+        repo_root: Path,
+    ) -> tuple[str, list[str]]:
+        source_files: dict[str, list[str]] = {}
+        missing_components: list[str] = []
+        for component_id in core_component_ids:
+            component = components.get(component_id)
+            if component is None:
+                missing_components.append(component_id)
+                continue
+            relative_path = self._component_relative_path(component, repo_root)
+            source_files.setdefault(relative_path, []).append(component_id)
+
+        source_lines: list[str] = []
+        for index, (relative_path, ids) in enumerate(sorted(source_files.items()), 1):
+            source_lines.append(f"{index}. `{relative_path}`")
+            for component_id in sorted(ids):
+                source_lines.append(f"   - `{component_id}`")
+
+        if not source_lines:
+            return "No source files were provided by analysis.", missing_components
+        return "\n".join(source_lines), missing_components
+
+    @staticmethod
+    def _parse_submodule_result(response: str) -> Dict[str, Any]:
+        import ast
+
+        if "<SUB_MODULES>" not in response or "</SUB_MODULES>" not in response:
+            raise ValueError("Submodule planning response missing <SUB_MODULES> block")
+        content = response.split("<SUB_MODULES>", 1)[1].split("</SUB_MODULES>", 1)[0].strip()
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            parsed = ast.literal_eval(content)
+        if not isinstance(parsed, dict):
+            raise ValueError("Submodule planning response must be a dictionary")
+        return parsed
 
     @staticmethod
     def _format_ide_user_prompt(

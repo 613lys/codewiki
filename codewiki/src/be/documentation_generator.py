@@ -16,6 +16,7 @@ from codewiki.src.be.prompt_template import (
     MODULE_OVERVIEW_PROMPT,
 )
 from codewiki.src.be.cluster_modules import cluster_modules
+from codewiki.src.be.utils import is_complex_module
 from codewiki.src.config import (
     Config,
     FIRST_MODULE_TREE_FILENAME,
@@ -116,6 +117,103 @@ class DocumentationGenerator:
     def _top_level_docs_ready(self, module_tree: Dict[str, Any], working_dir: str) -> bool:
         return all(self._module_doc_exists(working_dir, module_name) for module_name in module_tree)
 
+    def _can_plan_submodules(
+        self,
+        module_info: Dict[str, Any],
+        components: Dict[str, Any],
+        module_path: List[str],
+    ) -> bool:
+        children = module_info.get("children", {})
+        if isinstance(children, dict) and children:
+            return False
+        if module_info.get("submodule_planning") in {"done", "skipped"}:
+            return False
+        if len(module_path) >= self.config.max_depth:
+            return False
+        return is_complex_module(components, module_info.get("components", []))
+
+    @staticmethod
+    def _validate_submodule_plan(
+        planned_children: Dict[str, Any],
+        allowed_component_ids: List[str],
+    ) -> Dict[str, Any]:
+        allowed = set(allowed_component_ids)
+        used: set[str] = set()
+        validated: Dict[str, Any] = {}
+
+        for child_name, child_info in planned_children.items():
+            if not isinstance(child_name, str) or not child_name.strip():
+                continue
+            if not isinstance(child_info, dict):
+                continue
+            child_components = child_info.get("components", [])
+            if not isinstance(child_components, list):
+                continue
+
+            valid_components = []
+            for component_id in child_components:
+                if not isinstance(component_id, str):
+                    continue
+                if component_id not in allowed or component_id in used:
+                    continue
+                valid_components.append(component_id)
+                used.add(component_id)
+
+            if valid_components:
+                validated[child_name] = {
+                    "path": child_info.get("path", ""),
+                    "components": valid_components,
+                    "children": {},
+                }
+
+        return validated
+
+    def _apply_submodule_plan(
+        self,
+        module_tree: Dict[str, Any],
+        module_path: List[str],
+        planned_children: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        if not module_path:
+            return planned_children
+
+        current = module_tree
+        for index, path_part in enumerate(module_path):
+            module_info = current[path_part]
+            if index == len(module_path) - 1:
+                module_info["children"] = planned_children
+                module_info["submodule_planning"] = "done" if planned_children else "skipped"
+                return module_tree
+            current = module_info.setdefault("children", {})
+        return module_tree
+
+    async def _plan_and_apply_submodules(
+        self,
+        module_name: str,
+        components: Dict[str, Any],
+        core_component_ids: List[str],
+        module_path: List[str],
+        working_dir: str,
+        module_tree: Dict[str, Any],
+    ) -> Dict[str, Any] | None:
+        planner = getattr(self.backend, "plan_submodules", None)
+        if planner is None:
+            return None
+
+        planned = await planner(
+            module_name=module_name,
+            components=components,
+            core_component_ids=core_component_ids,
+            module_path=module_path,
+            working_dir=working_dir,
+            module_tree=module_tree,
+        )
+        if planned is None:
+            return None
+
+        validated = self._validate_submodule_plan(planned, core_component_ids)
+        return self._apply_submodule_plan(module_tree, module_path, validated)
+
     def build_overview_structure(self, module_tree: Dict[str, Any], module_path: List[str],
                                  working_dir: str) -> Dict[str, Any]:
         """Build structure for overview generation with 1-depth children docs and target indicator."""
@@ -211,6 +309,24 @@ class DocumentationGenerator:
                     
                     # Process the module
                     if self.is_leaf_module(module_info):
+                        if self._can_plan_submodules(module_info, components, module_path):
+                            logger.info(f"🧭 Planning sub-modules for: {module_key}")
+                            planned_tree = await self._plan_and_apply_submodules(
+                                module_name=module_name,
+                                components=components,
+                                core_component_ids=module_info["components"],
+                                module_path=module_path,
+                                working_dir=working_dir,
+                                module_tree=module_tree,
+                            )
+                            if planned_tree is not None:
+                                file_manager.save_json(planned_tree, module_tree_path)
+                                file_manager.save_json(planned_tree, first_module_tree_path)
+                                return await self.generate_module_documentation(
+                                    components,
+                                    leaf_nodes,
+                                )
+
                         logger.info(f"📄 Processing leaf module: {module_key}")
                         final_module_tree = await self.backend.run_module_agent(
                             module_name=module_name,
@@ -251,6 +367,21 @@ class DocumentationGenerator:
         else:
             logger.info(f"Processing whole repo because repo can fit in the context window")
             repo_name = os.path.basename(os.path.normpath(self.config.repo_path))
+
+            if self.config.max_depth > 0 and is_complex_module(components, leaf_nodes):
+                planned_tree = await self._plan_and_apply_submodules(
+                    module_name=repo_name,
+                    components=components,
+                    core_component_ids=leaf_nodes,
+                    module_path=[],
+                    working_dir=working_dir,
+                    module_tree=module_tree,
+                )
+                if planned_tree:
+                    file_manager.save_json(planned_tree, module_tree_path)
+                    file_manager.save_json(planned_tree, first_module_tree_path)
+                    return await self.generate_module_documentation(components, leaf_nodes)
+
             final_module_tree = await self.backend.run_module_agent(
                 module_name=repo_name,
                 components=components,

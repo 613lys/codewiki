@@ -202,6 +202,50 @@ Firstly reason based on given context and then group them and return the result 
 </GROUPED_COMPONENTS>
 """.strip()
 
+SUBMODULE_PLANNING_PROMPT = """
+You are planning sub-modules for the `{module_name}` module.
+
+Here is the module tree of the repository:
+<MODULE_TREE>
+{module_tree}
+</MODULE_TREE>
+
+Here are the core components of `{module_name}`:
+<CORE_COMPONENTS>
+{core_component_references}
+</CORE_COMPONENTS>
+
+Decide whether this module should be split into smaller sub-modules before documentation is generated.
+
+Rules:
+1. Split by business/domain responsibility, not mechanically by file type.
+2. Prefer 2-8 sub-modules when a split is useful.
+3. Every component ID must be copied exactly as given.
+4. Do not invent component IDs.
+5. Use only components listed in <CORE_COMPONENTS>.
+6. A component may appear in at most one sub-module.
+7. If the module should not be split, return an empty object.
+
+Return only the following structure:
+<SUB_MODULES>
+{{
+    "sub_module_name_1": {{
+        "path": <path_to_the_sub_module_1>,
+        "components": [
+            <component_id_1>,
+            <component_id_2>
+        ]
+    }},
+    "sub_module_name_2": {{
+        "path": <path_to_the_sub_module_2>,
+        "components": [
+            <component_id_3>
+        ]
+    }}
+}}
+</SUB_MODULES>
+""".strip()
+
 FILTER_FOLDERS_PROMPT = """
 Here is the list of relative paths of files, folders in 2-depth of project {project_name}:
 ```
