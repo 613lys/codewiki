@@ -373,22 +373,44 @@ class IDEBridgeBackend(LLMBackend):
         self._bridge_dir.mkdir(parents=True, exist_ok=True)
         manifest_path = self._bridge_dir / "pending_tasks.json"
         rerun_command = os.environ.get("CODEWIKI_RERUN_COMMAND", "codewiki generate")
+        indexed_tasks = [
+            {
+                "index": index,
+                "task_id": Path(task["task_path"]).stem,
+                **task,
+            }
+            for index, task in enumerate(self.pending_tasks, 1)
+        ]
+        selection_required = len(indexed_tasks) > 1
         manifest = {
             "status": "pending",
             "next_action": "complete_pending_tasks",
+            "selection_required": selection_required,
+            "user_confirmation_prompt": (
+                f"There are {len(indexed_tasks)} pending CodeWiki tasks. Ask the user which "
+                "task range to complete before writing results. Accept values like `all`, "
+                "`1-3`, or `4`. Complete only the selected task indexes, then rerun "
+                "rerun_command."
+                if selection_required
+                else "There is 1 pending CodeWiki task. Complete task 1, then rerun rerun_command."
+            ),
+            "range_examples": ["all", "1-3", "4"] if selection_required else ["1"],
             "agent_prompt": (
-                "You are running CodeWiki in agent batch mode. Complete every task listed in "
-                "tasks. For each task, read task_path, inspect the referenced repository files "
-                "directly, write the exact required response to result_path, then rerun "
-                "rerun_command. Repeat until CodeWiki reports status=complete."
+                "You are running CodeWiki in agent batch mode. If selection_required is true, "
+                "ask the user which task indexes or range to complete before writing any "
+                "results. Complete only the selected tasks. For each selected task, read "
+                "task_path, inspect the referenced repository files directly, write the exact "
+                "required response to result_path, then rerun rerun_command. Repeat until "
+                "CodeWiki reports status=complete."
             ),
             "rerun_command": rerun_command,
-            "task_count": len(self.pending_tasks),
-            "tasks": self.pending_tasks,
+            "task_count": len(indexed_tasks),
+            "tasks": indexed_tasks,
             "instructions": [
-                "Read each task_path.",
-                "Complete the task by reading referenced repository files.",
-                "Write the exact response to result_path.",
+                "If selection_required is true, ask the user which task indexes to complete.",
+                "Read each selected task_path.",
+                "Complete selected tasks by reading referenced repository files.",
+                "Write the exact response for each selected task to its result_path.",
                 "Rerun the same codewiki generate command.",
             ],
         }
